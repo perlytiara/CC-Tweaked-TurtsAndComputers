@@ -192,28 +192,81 @@ end
 -- Carve room: starting at bottom-left corner at floor level, facing forward
 local function carve_room(shape, room_w, room_d, above, below)
 	local mask = make_mask(shape, room_w, room_d)
-	-- y loop: from floor-below to floor+above
-	for y = -below, above do
-		-- move to target y
-		if y > 0 then for _=1,y do safe_up() end elseif y < 0 then for _=1,-y do safe_down() end end
-		local left_to_right = true
-		for z=1, room_d do
+	-- Phase A: from floor level up, optimized at level 2 (reach down/up)
+	local work_level = (above >= 2) and 2 or 1
+	if work_level == 2 then safe_up() end
+	local left_to_right = true
+	for z = 1, room_d do
+		if left_to_right then
+			for x = 1, room_w do
+				if mask[z][x] then
+					if work_level == 1 then
+						dig_forward()
+					else
+						turtle.digDown()
+						if above >= 2 then dig_upwards() end
+					end
+				end
+				if x < room_w then step_right() end
+			end
+		else
+			for x = room_w, 1, -1 do
+				if mask[z][x] then
+					if work_level == 1 then
+						dig_forward()
+					else
+						turtle.digDown()
+						if above >= 2 then dig_upwards() end
+					end
+				end
+				if x > 1 then step_left() end
+			end
+		end
+		left_to_right = not left_to_right
+		if z < room_d then dig_forward(); safe_forward() end
+	end
+
+	-- Extra top pass when above >= 3
+	if above >= 3 then
+		safe_up()
+		left_to_right = true
+		for z = 1, room_d do
 			if left_to_right then
-				for x=1, room_w do
-					if mask[z][x] then dig_forward() end
+				for x = 1, room_w do
+					if mask[z][x] then dig_upwards() end
 					if x < room_w then step_right() end
 				end
 			else
-				for x=room_w,1,-1 do
-					if mask[z][x] then dig_forward() end
+				for x = room_w, 1, -1 do
+					if mask[z][x] then dig_upwards() end
 					if x > 1 then step_left() end
 				end
 			end
 			left_to_right = not left_to_right
 			if z < room_d then dig_forward(); safe_forward() end
 		end
-		-- return to floor level before next y
-		if y > 0 then for _=1,y do safe_down() end elseif y < 0 then for _=1,-y do safe_up() end end
+		safe_down()
+	end
+
+	-- Phase B: below floor one layer
+	if below >= 1 then
+		if work_level == 2 then safe_down() end -- back to floor
+		left_to_right = true
+		for z = 1, room_d do
+			if left_to_right then
+				for x = 1, room_w do
+					if mask[z][x] then turtle.digDown() end
+					if x < room_w then step_right() end
+				end
+			else
+				for x = room_w, 1, -1 do
+					if mask[z][x] then turtle.digDown() end
+					if x > 1 then step_left() end
+				end
+			end
+			left_to_right = not left_to_right
+			if z < room_d then dig_forward(); safe_forward() end
+		end
 	end
 end
 
