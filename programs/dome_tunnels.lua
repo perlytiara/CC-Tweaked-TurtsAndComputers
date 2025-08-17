@@ -208,45 +208,82 @@ end
 -- starting at bottom edge; if start_at_left is true, begin at leftmost,
 -- otherwise begin at rightmost. Uses serpentine per-row to reduce moves.
 -- Returns boolean: are we at left edge after finishing the slice?
-local function carve_slice(width, side_h, center_h, radius, start_at_left)
+local function carve_slice(width, side_h, center_h, radius, start_at_left, current_level)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local function carve_column(height)
-		if height <= 0 then return end
-		-- dig vertical line from the face without entering the wall
-		dig_forward()
-		for ly = 2, height do
-			safe_up()
-			dig_forward()
-		end
-		for ly = height, 2, -1 do
-			safe_down()
-		end
+	local need_upper = false
+	for i = 1, #heights do if (heights[i] or 0) >= 4 then need_upper = true break end end
+
+	local function move_to_level(target)
+		while current_level < target do safe_up(); current_level = current_level + 1 end
+		while current_level > target do safe_down(); current_level = current_level - 1 end
 	end
+
+	-- Enter slice once at start, then operate mostly at level 2
+	dig_forward(); safe_forward()
+	if (heights[start_at_left and 1 or width] or 0) >= 2 then
+		move_to_level(2)
+	else
+		current_level = 1
+	end
+
+	local end_at_left
 	if start_at_left then
 		for x = 1, width do
-			carve_column(heights[x] or 0)
+			local h = heights[x] or 0
+			if current_level < 2 and h >= 2 then move_to_level(2) end
+			if current_level > 2 and h < 3 then move_to_level(2) end
+			if h >= 1 then turtle.digDown() end
+			if h >= 3 then dig_upwards() end
 			if x < width then step_right() end
 		end
-		return false
+		end_at_left = false
 	else
 		for x = width, 1, -1 do
-			carve_column(heights[x] or 0)
+			local h = heights[x] or 0
+			if current_level < 2 and h >= 2 then move_to_level(2) end
+			if current_level > 2 and h < 3 then move_to_level(2) end
+			if h >= 1 then turtle.digDown() end
+			if h >= 3 then dig_upwards() end
 			if x > 1 then step_left() end
 		end
-		return true
+		end_at_left = true
 	end
+
+	-- Upper pass only if needed (h==4)
+	if need_upper then
+		move_to_level(3)
+		if end_at_left then
+			for x = 1, width do
+				if (heights[x] or 0) >= 4 then dig_upwards() end
+				if x < width then step_right() end
+			end
+			end_at_left = false
+		else
+			for x = width, 1, -1 do
+				if (heights[x] or 0) >= 4 then dig_upwards() end
+				if x > 1 then step_left() end
+			end
+			end_at_left = true
+		end
+		-- settle to level 2 to start next slice efficiently
+		move_to_level(2)
+	end
+
+	return end_at_left, current_level
 end
 
 -- Estimate forward/up/down moves required to carve a slice and advance by one
 local function estimate_moves_per_slice(width, side_h, center_h, radius)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local vertical = 0
-	for i = 1, #heights do
-		local h = heights[i] or 0
-		if h >= 2 then vertical = vertical + 2 * (h - 1) end
-	end
+	local need_upper = false
+	for i = 1, #heights do if (heights[i] or 0) >= 4 then need_upper = true break end end
 	local lateral = (width - 1)
-	local advance = 1
+	local vertical = 1 -- adjust to level 2
+	if need_upper then
+		vertical = vertical + 2 -- up to level 3 and back to 2
+		lateral = lateral + (width - 1)
+	end
+	local advance = 1 -- entering slice
 	return vertical + lateral + advance
 end
 
@@ -565,6 +602,7 @@ local function main()
 	local per_slice_moves = estimate_moves_per_slice(width, side_h, center_h, radius)
 	local depth = 0
 	local at_left_edge = true -- start at bottom-left by convention
+	local current_level = 1
 
 	-- Carve tunnel
 	for step = 1, length do
@@ -578,10 +616,9 @@ local function main()
 			end
 		end
 
-		at_left_edge = carve_slice(width, side_h, center_h, radius, at_left_edge)
-		-- advance into the carved slice
-		dig_forward()
-		safe_forward()
+		at_left_edge, current_level = carve_slice(width, side_h, center_h, radius, at_left_edge, current_level)
+		-- advance to next slice face
+		dig_forward(); safe_forward()
 		place_torch_if_needed(step, cfg, width, side_h, center_h, radius, at_left_edge)
 		ensure_inventory_capacity(cfg, at_left_edge)
 		depth = depth + 1
