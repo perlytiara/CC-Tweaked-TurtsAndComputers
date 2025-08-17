@@ -553,7 +553,7 @@ local function main()
 
 	local per_slice_moves = estimate_moves_per_slice(width, side_h, center_h, radius)
 	local depth = 0
-\tlocal at_left_edge = true -- start at bottom-left by convention
+	local at_left_edge = true -- start at bottom-left by convention
 
 	-- Carve tunnel
 	for step = 1, length do
