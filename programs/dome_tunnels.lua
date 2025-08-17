@@ -210,45 +210,47 @@ end
 -- Returns boolean: are we at left edge after finishing the slice?
 local function carve_slice(width, side_h, center_h, radius, start_at_left)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local function carve_column(height)
-		if height <= 0 then return end
-		-- enter bottom cell
-		dig_forward(); safe_forward()
-		-- carve upward from inside the wall
-		for ly = 2, height do
-			safe_up()
-			dig_forward()
+	local max_h = 0
+	for i = 1, #heights do if heights[i] > max_h then max_h = heights[i] end end
+	if max_h == 0 then return end
+
+	local left_to_right = start_at_left
+	for row = 1, max_h do
+		if row > 1 then safe_up() end
+		if left_to_right then
+			for x = 1, width do
+				if heights[x] >= row then dig_forward() end
+				if x < width then step_right() end
+			end
+		else
+			for x = width, 1, -1 do
+				if heights[x] >= row then dig_forward() end
+				if x > 1 then step_left() end
+			end
 		end
-		-- return to floor
-		for ly = height, 2, -1 do
-			safe_down()
-		end
+		left_to_right = not left_to_right
 	end
-	if start_at_left then
-		for x = 1, width do
-			carve_column(heights[x] or 0)
-			if x < width then step_right() end
-		end
-		return false
-	else
-		for x = width, 1, -1 do
-			carve_column(heights[x] or 0)
-			if x > 1 then step_left() end
-		end
-		return true
+
+	for row = max_h, 2, -1 do
+		safe_down()
 	end
+
+	local end_at_left = start_at_left
+	if (max_h % 2) == 1 then
+		end_at_left = not start_at_left
+	end
+	return end_at_left
 end
 
 -- Estimate forward/up/down moves required to carve a slice and advance by one
 local function estimate_moves_per_slice(width, side_h, center_h, radius)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local vertical = 0
-	for i = 1, #heights do
-		local h = heights[i] or 0
-		if h >= 2 then vertical = vertical + 2 * (h - 1) end
-	end
-	local forward_moves = (width >= 1) and width or 0
-	return vertical + forward_moves
+	local max_h = 0
+	for i = 1, #heights do if heights[i] > max_h then max_h = heights[i] end end
+	local vertical = (max_h >= 2) and (2 * (max_h - 1)) or 0
+	local lateral = (width - 1) * max_h
+	local advance = 1
+	return vertical + lateral + advance
 end
 
 local function turn_around()
@@ -499,12 +501,12 @@ local function main()
 		side_h = ask_number_default("Side height (>=1):", 3, 1, 64)
 		center_h = ask_number_default("Center height (>=1):", 4, 1, 64)
 		length = ask_number_default("Length (>=1):", 32, 1, 100000)
-		radius = ask_number_default("Corner radius (0 = stepped, higher = rounder):", 1, 0, 32)
+		radius = ask_number_default("Corner radius (0 = stepped, higher = rounder):", 0, 0, 32)
 		auto_return = ask_yes_no("Auto-return to start to refuel when needed?", true)
 		use_torches = ask_yes_no("Place torches?", true)
 		if use_torches then
 			torch_spacing = ask_number_default("Torch spacing (blocks):", 9, 1, 64)
-			torch_side = ask_choice("Torch side:", "right", {"left", "right", "both"})
+			torch_side = ask_choice("Torch side:", "both", {"left", "right", "both"})
 			torch_slot = ask_number_default("Torch slot (1-16):", 1, 1, 16)
 		else
 			torch_spacing = 0; torch_side = "right"; torch_slot = 1
