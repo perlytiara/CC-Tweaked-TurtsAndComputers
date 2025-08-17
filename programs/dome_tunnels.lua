@@ -210,50 +210,45 @@ end
 -- Returns boolean: are we at left edge after finishing the slice?
 local function carve_slice(width, side_h, center_h, radius, start_at_left)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local max_h = 0
-	for i = 1, #heights do if heights[i] > max_h then max_h = heights[i] end end
-	if max_h == 0 then return end
-
-	local left_to_right = start_at_left
-	-- Row 1 is at floor; dig it first without moving up
-	for row = 1, max_h do
-		if row > 1 then safe_up() end
-		if left_to_right then
-			for x = 1, width do
-				if heights[x] >= row then dig_forward() end
-				if x < width then step_right() end
-			end
-		else
-			for x = width, 1, -1 do
-				if heights[x] >= row then dig_forward() end
-				if x > 1 then step_left() end
-			end
+	local function carve_column(height)
+		if height <= 0 then return end
+		-- enter bottom cell
+		dig_forward(); safe_forward()
+		-- carve upward from inside the wall
+		for ly = 2, height do
+			safe_up()
+			dig_forward()
 		end
-		left_to_right = not left_to_right
+		-- return to floor
+		for ly = height, 2, -1 do
+			safe_down()
+		end
 	end
-
-	-- Return to floor
-	for row = max_h, 2, -1 do
-		safe_down()
+	if start_at_left then
+		for x = 1, width do
+			carve_column(heights[x] or 0)
+			if x < width then step_right() end
+		end
+		return false
+	else
+		for x = width, 1, -1 do
+			carve_column(heights[x] or 0)
+			if x > 1 then step_left() end
+		end
+		return true
 	end
-
-	-- Determine which edge we end on (floor level)
-	local end_at_left = start_at_left
-	if (max_h % 2) == 1 then
-		end_at_left = not start_at_left
-	end
-	return end_at_left
 end
 
 -- Estimate forward/up/down moves required to carve a slice and advance by one
 local function estimate_moves_per_slice(width, side_h, center_h, radius)
 	local heights = compute_heights(width, side_h, center_h, radius)
-	local max_h = 0
-	for i = 1, #heights do if heights[i] > max_h then max_h = heights[i] end end
-	local vertical = (max_h >= 2) and (2 * (max_h - 1)) or 0
-	local lateral = (width - 1) * max_h
-	local advance = 1
-	return vertical + lateral + advance
+	local vertical = 0
+	for i = 1, #heights do
+		local h = heights[i] or 0
+		if h >= 2 then vertical = vertical + 2 * (h - 1) end
+	end
+	local forward_moves = (width >= 1) and width or 0
+	return vertical + forward_moves
 end
 
 local function turn_around()
@@ -428,7 +423,6 @@ local function place_torch_if_needed(step_idx, cfg, width, side_h, center_h, rad
 		end
 		turn_to_side(side)
 		turtle.select(cfg.torch_slot)
-		dig_forward()
 		local ok = turtle.place()
 		if not ok then
 			-- fallback to floor torch
@@ -540,7 +534,7 @@ local function main()
 	print("Auto-return for fuel:\t"..(auto_return and "Yes" or "No"))
 	print("Torches:\t\t"..(cfg.use_torches and ("Yes (every "..cfg.torch_spacing.." blocks)") or "No"))
 	if cfg.use_torches then
-		print("Torch side:\t"..cfg.torch_side.." (placed at edge)")
+		print("Torch side:\t"..cfg.torch_side.." (top corners; no extra wall digging)")
 		print("Torch slot:\t"..cfg.torch_slot)
 	end
 	print("Chests:\t\t"..(cfg.use_chests and ("Yes (slot "..cfg.chest_slot..")") or "No"))
