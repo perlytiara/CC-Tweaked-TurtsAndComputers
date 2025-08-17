@@ -291,12 +291,29 @@ end
 
 -- Favorites storage helpers
 local function favorite_path()
-	return "dome_favorite"
+	local dir = ".dome_tunnels"
+	if not fs.exists(dir) then fs.makeDir(dir) end
+	return fs.combine(dir, "dome_tunnel_favorite")
 end
 
 local function load_favorite()
-	if not fs.exists(favorite_path()) then return nil end
-	local h = fs.open(favorite_path(), "r")
+	local path = favorite_path()
+	-- Backward compatibility: migrate old root-level file if present
+	if not fs.exists(path) and fs.exists("dome_favorite") then
+		local hOld = fs.open("dome_favorite", "r")
+		if hOld then
+			local d = hOld.readAll(); hOld.close()
+			local okOld, tblOld = pcall(textutils.unserialize, d)
+			if okOld and type(tblOld) == "table" then
+				local hNew = fs.open(path, "w")
+				if hNew then hNew.write(textutils.serialize(tblOld)); hNew.close() end
+				-- Optionally remove old file
+				pcall(fs.delete, "dome_favorite")
+			end
+		end
+	end
+	if not fs.exists(path) then return nil end
+	local h = fs.open(path, "r")
 	if not h then return nil end
 	local data = h.readAll()
 	h.close()
@@ -306,7 +323,8 @@ local function load_favorite()
 end
 
 local function save_favorite(fav)
-	local h = fs.open(favorite_path(), "w")
+	local path = favorite_path()
+	local h = fs.open(path, "w")
 	if not h then return end
 	h.write(textutils.serialize(fav))
 	h.close()
