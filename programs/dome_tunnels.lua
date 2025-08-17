@@ -617,8 +617,6 @@ local function main()
 		end
 
 		at_left_edge, current_level = carve_slice(width, side_h, center_h, radius, at_left_edge, current_level)
-		-- advance to next slice face
-		dig_forward(); safe_forward()
 		place_torch_if_needed(step, cfg, width, side_h, center_h, radius, at_left_edge)
 		ensure_inventory_capacity(cfg, at_left_edge)
 		depth = depth + 1
