@@ -164,6 +164,31 @@ local function make_mask(shape, width, depth)
 	return mask
 end
 
+-- Carve rectangular doorway face of given width/height at current position; return whether we end at left
+local function carve_rect_face(doorway_w, doorway_h, start_at_left)
+	local max_h = doorway_h
+	local left_to_right = start_at_left
+	for row = 1, max_h do
+		if row > 1 then safe_up() end
+		if left_to_right then
+			for x = 1, doorway_w do
+				dig_forward()
+				if x < doorway_w then step_right() end
+			end
+		else
+			for x = doorway_w, 1, -1 do
+				dig_forward()
+				if x > 1 then step_left() end
+			end
+		end
+		left_to_right = not left_to_right
+	end
+	for row = max_h, 2, -1 do safe_down() end
+	local end_at_left = start_at_left
+	if (max_h % 2) == 1 then end_at_left = not start_at_left end
+	return end_at_left
+end
+
 -- Carve room: starting at bottom-left corner at floor level, facing forward
 local function carve_room(shape, room_w, room_d, above, below)
 	local mask = make_mask(shape, room_w, room_d)
@@ -199,7 +224,7 @@ local function main()
 
 	local fav = load_favorite(); local use_fav = fav and ask_yes_no("Use favorite saved config?", true) or false
 
-	local start_mode, doorway_w, doorway_len
+	local start_mode, doorway_w, doorway_len, doorway_h
 	local shape, room_w, room_d, above, below
 	local multi_levels, num_levels, level_spacing, build_floors, floor_slot
 
@@ -226,11 +251,17 @@ local function main()
 			room_w = ask_number_default("Room width (X):", 9, 1, 199)
 			room_d = ask_number_default("Room depth (Z):", 9, 1, 199)
 		elseif shape == "circle" then
-			local r = ask_number_default("Circle radius:", 5, 1, 99); room_w = 2*r+1; room_d = 2*r+1
+			local unit = ask_choice("Circle size unit:", "radius", {"radius","diameter"})
+			if unit == "radius" then
+				local r = ask_number_default("Radius:", 5, 1, 99); room_w = 2*r+1; room_d = 2*r+1
+			else
+				local d = ask_number_default("Diameter:", 11, 3, 199); room_w = d; room_d = d
+			end
 		else
 			room_w = ask_number_default("Triangle base width (X):", 9, 3, 199)
 			room_d = ask_number_default("Triangle depth (Z):", 9, 2, 199)
 		end
+		doorway_h = ask_number_default("Doorway height above floor:", 3, 1, 16)
 		above = ask_number_default("Height above floor:", 3, 0, 32)
 		below = ask_number_default("Height below floor:", 0, 0, 16)
 		multi_levels = ask_yes_no("Multiple levels?", false)
@@ -248,38 +279,41 @@ local function main()
 	end
 
 	term.clear(); term.setCursorPos(1,1)
-	print("Start:"..start_mode.."  Doorway:"..doorway_w.."w x "..doorway_len.."l  Shape:"..shape)
+	print("Start:"..start_mode.."  Doorway:"..doorway_w.."w x "..doorway_len.."l x "..(doorway_h or 3).."h  Shape:"..shape)
 	print("Room:"..room_w.."w x "..room_d.."d  Height:+"..above.."/-"..below)
 	if multi_levels then print("Levels:"..num_levels.." every "..level_spacing.."; build floors:"..tostring(build_floors)) end
 	print(""); print("Press Enter to start..."); read()
 
-	-- Step 1: go forward doorway length
-	for i=1,doorway_len do dig_forward(); safe_forward() end
+	-- Step 1: align to bottom-left corner of doorway
+	local left_offset = math.floor((doorway_w-1)/2)
+	if start_mode == "center" then turn_left(); for i=1,left_offset do dig_forward(); safe_forward() end; turn_right() end
 
-	-- Step 2: move to bottom-left corner of room bbox
-	local left_offset = math.floor((room_w-1)/2)
-	if start_mode == "center" then
-		turn_left(); for i=1,left_offset do dig_forward(); safe_forward() end; turn_right()
-	else
-		-- already at left edge; ensure alignment at bottom-left of room: nothing to do
+	-- Step 2: carve doorway (width x height x length), serpentine per face
+	local at_left = true
+	for slice=1, doorway_len do
+		at_left = carve_rect_face(doorway_w, doorway_h or 3, at_left)
+		-- advance into carved slice
+		dig_forward(); safe_forward()
 	end
+	-- Ensure at leftmost edge at floor for room start
+	if not at_left then for i=1, (doorway_w-1) do step_left() end end
 
 	-- Carve levels
 	for level=1, num_levels do
 		carve_room(shape, room_w, room_d, above, below)
 		-- Optional: build floor at current floor level
-		if build_floors and turtle.getItemCount(floor_slot)>0 then
+		if build_floors and turtle.getItemCount(floor_slot)>1 then
 			-- lay floor across room at y=0 by placing down while traversing a simple grid
 			local left_to_right = true
 			for z=1, room_d do
 				if left_to_right then
 					for x=1, room_w do
-						turtle.select(floor_slot); turtle.placeDown()
+						turtle.select(floor_slot); if turtle.getItemCount(floor_slot)>1 then turtle.placeDown() end
 						if x < room_w then step_right() end
 					end
 				else
 					for x=room_w,1,-1 do
-						turtle.select(floor_slot); turtle.placeDown()
+						turtle.select(floor_slot); if turtle.getItemCount(floor_slot)>1 then turtle.placeDown() end
 						if x > 1 then step_left() end
 					end
 				end
