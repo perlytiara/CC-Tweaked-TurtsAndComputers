@@ -1,3 +1,4 @@
+-- Replace entire file content with the original version
 -- tStairs.lua
 -- Fast staircase builder for ComputerCraft turtles.
 --
