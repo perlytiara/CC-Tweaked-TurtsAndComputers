@@ -54,10 +54,17 @@ local turtles = {}
 for i = 1, num do
   print("For turtle " .. i .. ", enter corner (1=bottom-left, 2=bottom-right, 3=top-right, 4=top-left):")
   local corner = tonumber(read())
-  if not corner_info[corner] then error("Invalid corner") end
+  if not corner or not corner_info[corner] then 
+    print("Invalid corner. Please enter 1, 2, 3, or 4.")
+    return
+  end
 
   print("Enter ID for " .. corner_info[corner].name .. ":")
   local id = tonumber(read())
+  if not id then
+    print("Invalid ID. Please enter a number.")
+    return
+  end
 
   print("Enter facing for " .. corner_info[corner].name .. " (1=+Z, 2=-Z, default " .. corner_info[corner].default_facing .. "):")
   local facing_input = tonumber(read())
@@ -133,6 +140,13 @@ end
 -- Now compute based on num
 if num == 1 then
   local t = turtles[1]
+  local info = corner_info[t.corner]
+  local is_left = (info.x == 0)
+  local desired_x_dir = is_left and 1 or -1
+  local facing_sign = t.facing
+  local sizeX_sign = desired_x_dir * facing_sign
+  local sizeZ_sign = facing_sign
+  
   local abs_sizeZ = total_length
   local abs_sizeX = total_width
   local sizeZ = sizeZ_sign * abs_sizeZ
@@ -158,7 +172,14 @@ elseif num == 2 then
         if tt.corner == group[j].corner then idx = k break end
       end
       local abs_sizeX = parts[j]
-      local sizeZ = sizeZ_sign * abs_sizeZ  -- sign per turtle
+      local t = turtles[idx]
+      local info = corner_info[t.corner]
+      local is_left = (info.x == 0)
+      local desired_x_dir = is_left and 1 or -1
+      local facing_sign = t.facing
+      local sizeX_sign = desired_x_dir * facing_sign
+      local sizeZ_sign = facing_sign
+      local sizeZ = sizeZ_sign * abs_sizeZ
       local sizeX = sizeX_sign * abs_sizeX
       params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
     end
@@ -174,6 +195,13 @@ elseif num == 2 then
         if tt.corner == group[j].corner then idx = k break end
       end
       local abs_sizeZ = parts[j]
+      local t = turtles[idx]
+      local info = corner_info[t.corner]
+      local is_left = (info.x == 0)
+      local desired_x_dir = is_left and 1 or -1
+      local facing_sign = t.facing
+      local sizeX_sign = desired_x_dir * facing_sign
+      local sizeZ_sign = facing_sign
       local sizeZ = sizeZ_sign * abs_sizeZ
       local sizeX = sizeX_sign * abs_sizeX
       params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
@@ -183,7 +211,14 @@ elseif num == 2 then
     local h_parts_l = divide_dim(total_length, 2)
     local h_parts_w = divide_dim(total_width, 2)
     for j = 1, 2 do
-      local c = turtles[j].corner
+      local t = turtles[j]
+      local c = t.corner
+      local info = corner_info[c]
+      local is_left = (info.x == 0)
+      local desired_x_dir = is_left and 1 or -1
+      local facing_sign = t.facing
+      local sizeX_sign = desired_x_dir * facing_sign
+      local sizeZ_sign = facing_sign
       local abs_sizeZ = (corner_info[c].z == 0) and h_parts_l[1] or h_parts_l[2]
       local abs_sizeX = (corner_info[c].x == 0) and h_parts_w[1] or h_parts_w[2]
       local sizeZ = sizeZ_sign * abs_sizeZ
@@ -195,9 +230,9 @@ elseif num == 2 then
 elseif num == 3 then
   -- Balanced split
   local multiple_side, single_side, is_horizontal
-  if max(count_bottom, count_top) == 2 then
+  if math.max(count_bottom, count_top) == 2 then
     is_horizontal = true
-  elseif max(count_left, count_right) == 2 then
+  elseif math.max(count_left, count_right) == 2 then
     is_horizontal = false
   else
     is_horizontal = is_horizontal_pref
