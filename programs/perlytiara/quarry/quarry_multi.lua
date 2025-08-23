@@ -38,53 +38,174 @@ local function divide_dim(dim, n)
   return parts
 end
 
--- Wizard
-print("Enter total length (sizeZ, positive):")
-local total_length = tonumber(read()) or error("Invalid input")
-print("Enter total width (sizeX, positive):")
-local total_width = tonumber(read()) or error("Invalid input")
-print("Enter total depth (sizeY, positive, default 256):")
-local total_depth = tonumber(read()) or 256
+-- Wizard - Get dimensions
+print("=== Quarry Dimensions ===")
+local total_length
+while true do
+  print("Enter total length (sizeZ, positive):")
+  total_length = tonumber(read())
+  if total_length and total_length > 0 then
+    break
+  else
+    print("Invalid input. Please enter a positive number.")
+  end
+end
 
-print("Enter number of turtles (1-4):")
-local num = tonumber(read())
-if num < 1 or num > 4 then error("Number must be 1-4") end
+local total_width
+while true do
+  print("Enter total width (sizeX, positive):")
+  total_width = tonumber(read())
+  if total_width and total_width > 0 then
+    break
+  else
+    print("Invalid input. Please enter a positive number.")
+  end
+end
 
+local total_depth
+while true do
+  print("Enter total depth (sizeY, positive, default 256):")
+  local input = read()
+  if input == "" then
+    total_depth = 256
+    break
+  else
+    total_depth = tonumber(input)
+    if total_depth and total_depth > 0 then
+      break
+    else
+      print("Invalid input. Please enter a positive number or press Enter for default (256).")
+    end
+  end
+end
+
+-- Get number of turtles
+local num
+while true do
+  print("Enter number of turtles (1-4):")
+  num = tonumber(read())
+  if num and num >= 1 and num <= 4 then
+    break
+  else
+    print("Invalid input. Please enter a number between 1 and 4.")
+  end
+end
+
+-- Setup each turtle one by one
 local turtles = {}
 for i = 1, num do
-  print("For turtle " .. i .. ", enter corner (1=bottom-left, 2=bottom-right, 3=top-right, 4=top-left):")
-  local corner = tonumber(read())
-  if not corner or not corner_info[corner] then 
-    print("Invalid corner. Please enter 1, 2, 3, or 4.")
-    return
+  print("\n=== Setting up Turtle " .. i .. " ===")
+  
+  -- Get corner
+  local corner
+  while true do
+    print("Available corners:")
+    print("  1 = bottom-left (SW)")
+    print("  2 = bottom-right (SE)")  
+    print("  3 = top-right (NE)")
+    print("  4 = top-left (NW)")
+    print("Enter corner number for turtle " .. i .. ":")
+    corner = tonumber(read())
+    if corner and corner_info[corner] then
+      break
+    else
+      print("Invalid corner. Please enter 1, 2, 3, or 4.")
+    end
   end
 
-  print("Enter ID for " .. corner_info[corner].name .. ":")
-  local id = tonumber(read())
-  if not id then
-    print("Invalid ID. Please enter a number.")
-    return
+  -- Get turtle ID
+  local id
+  while true do
+    print("Enter turtle ID for " .. corner_info[corner].name .. ":")
+    print("(Use 'id' command on the turtle to get its ID)")
+    id = tonumber(read())
+    if id and id > 0 then
+      break
+    else
+      print("Invalid ID. Please enter a positive number.")
+    end
   end
 
-  print("Enter facing for " .. corner_info[corner].name .. " (1=+Z, 2=-Z, default " .. corner_info[corner].default_facing .. "):")
-  local facing_input = tonumber(read())
-  local facing = facing_input or corner_info[corner].default_facing
-  if facing ~= 1 and facing ~= -1 then
-    if facing == 2 then facing = -1 else error("Invalid facing") end
+  -- Get facing direction
+  local facing
+  while true do
+    print("Enter facing direction for " .. corner_info[corner].name .. ":")
+    print("  1 = +Z (forward/north)")
+    print("  2 = -Z (backward/south)")
+    print("  (default: " .. corner_info[corner].default_facing .. ")")
+    local input = read()
+    if input == "" then
+      facing = corner_info[corner].default_facing
+      break
+    else
+      local facing_input = tonumber(input)
+      if facing_input == 1 then
+        facing = 1
+        break
+      elseif facing_input == 2 then
+        facing = -1
+        break
+      else
+        print("Invalid facing. Please enter 1 or 2, or press Enter for default.")
+      end
+    end
   end
 
   turtles[i] = {corner = corner, id = id, facing = facing}
+  print("Turtle " .. i .. " configured: " .. corner_info[corner].name .. " (ID: " .. id .. ") facing " .. (facing == 1 and "+Z" or "-Z"))
 end
 
-print("Preserve top layer (start digging below)? (1=yes, 0=no, default 0):")
-local start_below = tonumber(read()) or 0
+-- Get options
+print("\n=== Quarry Options ===")
+local start_below
+while true do
+  print("Preserve top layer (start digging below)? (y/n, default n):")
+  local input = read():lower()
+  if input == "" or input == "n" or input == "no" then
+    start_below = 0
+    break
+  elseif input == "y" or input == "yes" then
+    start_below = 1
+    break
+  else
+    print("Invalid input. Please enter 'y' for yes, 'n' for no, or press Enter for default (no).")
+  end
+end
 
-print("Debug mode? (1=yes, 0=no, default 0):")
-local debug = tonumber(read()) or 0
+local debug
+while true do
+  print("Debug mode? (y/n, default n):")
+  local input = read():lower()
+  if input == "" or input == "n" or input == "no" then
+    debug = 0
+    break
+  elseif input == "y" or input == "yes" then
+    debug = 1
+    break
+  else
+    print("Invalid input. Please enter 'y' for yes, 'n' for no, or press Enter for default (no).")
+  end
+end
 
-print("Preferred split direction for 3 turtles (1=horizontal/width, 2=vertical/length, default 1):")
-local pref_split = tonumber(read()) or 1
-local is_horizontal_pref = (pref_split == 1)
+local is_horizontal_pref = true
+if num == 3 then
+  while true do
+    print("For 3 turtles, preferred split direction:")
+    print("  1 = horizontal/width")
+    print("  2 = vertical/length")
+    print("  (default: horizontal)")
+    local input = read()
+    if input == "" or input == "1" then
+      is_horizontal_pref = true
+      break
+    elseif input == "2" then
+      is_horizontal_pref = false
+      break
+    else
+      print("Invalid input. Please enter 1, 2, or press Enter for default (horizontal).")
+    end
+  end
+end
 
 -- Compute counts
 local count_bottom = 0
@@ -350,7 +471,22 @@ elseif num == 4 then
   end
 end
 
+-- Summary
+print("\n=== Quarry Configuration Summary ===")
+print("Dimensions: " .. total_length .. " x " .. total_width .. " x " .. total_depth)
+print("Turtles: " .. num)
+for i = 1, num do
+  local t = turtles[i]
+  print("  Turtle " .. i .. ": " .. corner_info[t.corner].name .. " (ID: " .. t.id .. ") facing " .. (t.facing == 1 and "+Z" or "-Z"))
+end
+print("Start below: " .. (start_below == 1 and "Yes" or "No"))
+print("Debug mode: " .. (debug == 1 and "Yes" or "No"))
+
+print("\nPress Enter to send commands to turtles, or Ctrl+T to cancel...")
+read()
+
 -- Send to each
+print("\n=== Sending Commands ===")
 for i = 1, num do
   local id = turtles[i].id
   local param = params_list[i]
@@ -359,9 +495,10 @@ for i = 1, num do
 
   print("Sending to turtle ID " .. id .. " (" .. role .. "): quarry " .. param)
   rednet.send(id, payload, "quarry-run")
-  rednet.send(id, param, "quarry-run") -- fallback
+  rednet.send(id, params_list[i], "quarry-run") -- fallback with plain string
 end
 
-print("Turtles should start digging now.")
+print("\nCommands sent! Turtles should start digging now.")
+print("Make sure each turtle is running 'quarry_listener' and has fuel in slot 1.")
 
 -- Note: For num=3, areas are approximately equal, but may differ slightly due to integer dimensions. Adjust total sizes for better balance if needed.
