@@ -67,3 +67,7 @@ for i, id in ipairs(ids) do
 end
 
 print("Turtles should start building stairs now.")
+
+
+
+
