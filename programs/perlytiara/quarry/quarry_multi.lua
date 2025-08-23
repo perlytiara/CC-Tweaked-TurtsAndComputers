@@ -20,11 +20,12 @@ if wrapped and wrapped.isWireless and not wrapped.isWireless() then
 end
 
 -- Corner definitions (normalized x=0 left, 1 right; z=0 bottom, 1 top)
+-- Facing directions are set so turtles face INWARD toward the center of the quarry
 local corner_info = {
-  [1] = {name = "bottom-left (SW)", x = 0, z = 0, default_facing = 1},  -- +Z
-  [2] = {name = "bottom-right (SE)", x = 1, z = 0, default_facing = 1},
-  [3] = {name = "top-right (NE)", x = 1, z = 1, default_facing = -1},  -- -Z
-  [4] = {name = "top-left (NW)", x = 0, z = 1, default_facing = -1}
+  [1] = {name = "bottom-left (SW)", x = 0, z = 0, default_facing = 1},   -- +Z (facing north/forward)
+  [2] = {name = "bottom-right (SE)", x = 1, z = 0, default_facing = 1},  -- +Z (facing north/forward) 
+  [3] = {name = "top-right (NE)", x = 1, z = 1, default_facing = -1},    -- -Z (facing south/backward)
+  [4] = {name = "top-left (NW)", x = 0, z = 1, default_facing = -1}      -- -Z (facing south/backward)
 }
 
 -- Function to divide dimension into n parts
@@ -99,11 +100,19 @@ for i = 1, num do
   -- Get corner
   local corner
   while true do
-    print("Available corners:")
-    print("  1 = bottom-left (SW)")
-    print("  2 = bottom-right (SE)")  
-    print("  3 = top-right (NE)")
-    print("  4 = top-left (NW)")
+    print("Turtle placement diagram (viewed from above):")
+    print("  4(NW) <------ 3(NE)")
+    print("   ^             ^")
+    print("   |   QUARRY    |")
+    print("   |    AREA     |")
+    print("   v             v")
+    print("  1(SW) ------> 2(SE)")
+    print("")
+    print("Available corners (place turtles facing INWARD toward quarry center):")
+    print("  1 = bottom-left (SW)  - face +Z (north/forward)")
+    print("  2 = bottom-right (SE) - face +Z (north/forward)")  
+    print("  3 = top-right (NE)    - face -Z (south/backward)")
+    print("  4 = top-left (NW)     - face -Z (south/backward)")
     print("Enter corner number for turtle " .. i .. ":")
     corner = tonumber(read())
     if corner and corner_info[corner] then

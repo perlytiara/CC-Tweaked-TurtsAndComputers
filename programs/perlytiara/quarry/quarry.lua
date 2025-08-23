@@ -60,6 +60,20 @@ local tX,tZ,tY = 0,0,0    -- Place the turtle starts is considered block 0,0,0 i
 local xDir,zDir = 0,1     -- Turtle is considered as initially facing positive z direction, regardless of global world facing direction
 local refuelSlot = 1      -- Turtle can fuel from any slot, but it will never dump this slot's contents so this is where fuel should be placed
 
+-- Define turn functions before using them
+local function turnLeft()
+  turtle.turnLeft()
+  xDir,zDir = -zDir,xDir
+  return true
+end
+
+local function turnRight()
+  turtle.turnRight()
+  xDir,zDir = zDir,-xDir
+  return true
+end
+
+-- Apply initial facing adjustments
 if zSign == -1 then
   turnLeft()
   turnLeft()
@@ -133,18 +147,6 @@ local function checkFuel(bMovingAwayFromOrigin)
 			end
 		end
 	end
-end
-
-local function turnLeft()
-  turtle.turnLeft()
-  xDir,zDir = -zDir,xDir
-  return true
-end
-
-local function turnRight()
-  turtle.turnRight()
-  xDir,zDir = zDir,-xDir
-  return true
 end
 
 local function goForward(bCheckFuel)
