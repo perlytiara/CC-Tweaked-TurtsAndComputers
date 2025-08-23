@@ -17,6 +17,7 @@ local cVersion  ="v1.01"
 -- basic functions for turtle control -
 ---------------------------------------
 -- Movement helpers now handle obstacles and fuel to prevent getting stuck
+local SLEEP_RETRY = 0.05
 local function ensureFuel()
   if turtle.getFuelLevel and turtle.getFuelLevel() == 0 then
     local currentSlot = turtle.getSelectedSlot and turtle.getSelectedSlot() or 1
@@ -35,12 +36,18 @@ local function gf()
     if turtle.forward() then return end
     if turtle.detect() then turtle.dig() end
     if turtle.attack then turtle.attack() end
-    os.sleep(0.2)
+    os.sleep(SLEEP_RETRY)
   end
 end
 local function gb()
   ensureFuel()
-  -- Turn around and move forward to simulate a reliable back movement
+  -- Fast path: try to step back a few times without turning
+  for attempt = 1, 3 do
+    if turtle.back() then return end
+    if turtle.attack then turtle.attack() end
+    os.sleep(SLEEP_RETRY)
+  end
+  -- Fallback: turn around and use forward logic once
   turtle.turnLeft(); turtle.turnLeft()
   gf()
   turtle.turnLeft(); turtle.turnLeft()
@@ -51,7 +58,7 @@ local function gu()
     if turtle.up() then return end
     if turtle.detectUp then if turtle.detectUp() then turtle.digUp() end end
     if turtle.attackUp then turtle.attackUp() end
-    os.sleep(0.2)
+    os.sleep(SLEEP_RETRY)
   end
 end
 local function gd()
@@ -60,7 +67,7 @@ local function gd()
     if turtle.down() then return end
     if turtle.detectDown then if turtle.detectDown() then turtle.digDown() end end
     if turtle.attackDown then turtle.attackDown() end
-    os.sleep(0.2)
+    os.sleep(SLEEP_RETRY)
   end
 end
 local function gl()  while not turtle.turnLeft()  do end end
