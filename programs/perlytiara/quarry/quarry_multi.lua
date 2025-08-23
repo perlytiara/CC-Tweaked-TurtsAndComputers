@@ -20,12 +20,12 @@ if wrapped and wrapped.isWireless and not wrapped.isWireless() then
 end
 
 -- Corner definitions (normalized x=0 left, 1 right; z=0 bottom, 1 top)
--- Facing directions are set so turtles face INWARD toward the center of the quarry
+-- ALL turtles face +Z (forward/north) but dig different areas based on position
 local corner_info = {
   [1] = {name = "bottom-left (SW)", x = 0, z = 0, default_facing = 1},   -- +Z (facing north/forward)
   [2] = {name = "bottom-right (SE)", x = 1, z = 0, default_facing = 1},  -- +Z (facing north/forward) 
-  [3] = {name = "top-right (NE)", x = 1, z = 1, default_facing = -1},    -- -Z (facing south/backward)
-  [4] = {name = "top-left (NW)", x = 0, z = 1, default_facing = -1}      -- -Z (facing south/backward)
+  [3] = {name = "top-right (NE)", x = 1, z = 1, default_facing = 1},     -- +Z (facing north/forward) - CHANGED
+  [4] = {name = "top-left (NW)", x = 0, z = 1, default_facing = 1}       -- +Z (facing north/forward) - CHANGED
 }
 
 -- Function to divide dimension into n parts
@@ -101,18 +101,18 @@ for i = 1, num do
   local corner
   while true do
     print("Turtle placement diagram (viewed from above):")
-    print("  4(NW) <------ 3(NE)")
+    print("  4(NW) ------> 3(NE)")
     print("   ^             ^")
     print("   |   QUARRY    |")
     print("   |    AREA     |")
-    print("   v             v")
+    print("   ^             ^")
     print("  1(SW) ------> 2(SE)")
     print("")
-    print("Available corners (place turtles facing INWARD toward quarry center):")
+    print("Available corners (ALL turtles face +Z forward/north):")
     print("  1 = bottom-left (SW)  - face +Z (north/forward)")
     print("  2 = bottom-right (SE) - face +Z (north/forward)")  
-    print("  3 = top-right (NE)    - face -Z (south/backward)")
-    print("  4 = top-left (NW)     - face -Z (south/backward)")
+    print("  3 = top-right (NE)    - face +Z (north/forward)")
+    print("  4 = top-left (NW)     - face +Z (north/forward)")
     print("Enter corner number for turtle " .. i .. ":")
     corner = tonumber(read())
     if corner and corner_info[corner] then
@@ -366,8 +366,10 @@ elseif num == 2 then
       local sizeZ_sign = facing_sign
       local abs_sizeZ = (corner_info[c].z == 0) and h_parts_l[1] or h_parts_l[2]
       local abs_sizeX = (corner_info[c].x == 0) and h_parts_w[1] or h_parts_w[2]
-      local sizeZ = sizeZ_sign * abs_sizeZ
-      local sizeX = sizeX_sign * abs_sizeX
+      -- Bottom turtles: positive Z, Top turtles: negative Z
+      local sizeZ = (corner_info[c].z == 0) and abs_sizeZ or (-abs_sizeZ)
+      -- Left turtles: positive X, Right turtles: negative X
+      local sizeX = (corner_info[c].x == 0) and abs_sizeX or (-abs_sizeX)
       params_list[j] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
   end
@@ -489,8 +491,12 @@ elseif num == 4 then
     end
     local abs_sizeZ = (corner_info[c].z == 0) and h_parts_l[1] or h_parts_l[2]
     local abs_sizeX = (corner_info[c].x == 0) and h_parts_w[1] or h_parts_w[2]
-    local sizeZ = t.facing * abs_sizeZ
-    local sizeX = ( (corner_info[c].x == 0 and 1 or -1) * t.facing ) * abs_sizeX
+    -- Bottom turtles (z=0): positive Z to dig forward
+    -- Top turtles (z=1): negative Z to dig backward toward center
+    local sizeZ = (corner_info[c].z == 0) and abs_sizeZ or (-abs_sizeZ)
+    -- Left turtles (x=0): positive X to dig rightward
+    -- Right turtles (x=1): negative X to dig leftward toward center  
+    local sizeX = (corner_info[c].x == 0) and abs_sizeX or (-abs_sizeX)
     params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
   end
 end
