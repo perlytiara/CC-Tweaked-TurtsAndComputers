@@ -196,6 +196,21 @@ while true do
   end
 end
 
+local auto_start
+while true do
+  print("Auto-start turtles (skip fuel prompt)? (y/n, default y):")
+  local input = read():lower()
+  if input == "" or input == "y" or input == "yes" then
+    auto_start = 1
+    break
+  elseif input == "n" or input == "no" then
+    auto_start = 0
+    break
+  else
+    print("Invalid input. Please enter 'y' for yes, 'n' for no, or press Enter for default (yes).")
+  end
+end
+
 local is_horizontal_pref = true
 if num == 3 then
   while true do
@@ -281,7 +296,7 @@ if num == 1 then
   local abs_sizeX = total_width
   local sizeZ = sizeZ_sign * abs_sizeZ
   local sizeX = sizeX_sign * abs_sizeX
-  params_list[1] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+  params_list[1] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
 
 elseif num == 2 then
   -- Determine type
@@ -311,7 +326,7 @@ elseif num == 2 then
       local sizeZ_sign = facing_sign
       local sizeZ = sizeZ_sign * abs_sizeZ
       local sizeX = sizeX_sign * abs_sizeX
-      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
   elseif all_left or all_right then
     -- Vertical aligned, split length, full width
@@ -334,7 +349,7 @@ elseif num == 2 then
       local sizeZ_sign = facing_sign
       local sizeZ = sizeZ_sign * abs_sizeZ
       local sizeX = sizeX_sign * abs_sizeX
-      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
   else
     -- Diagonal
@@ -353,7 +368,7 @@ elseif num == 2 then
       local abs_sizeX = (corner_info[c].x == 0) and h_parts_w[1] or h_parts_w[2]
       local sizeZ = sizeZ_sign * abs_sizeZ
       local sizeX = sizeX_sign * abs_sizeX
-      params_list[j] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+      params_list[j] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
   end
 
@@ -400,7 +415,7 @@ elseif num == 3 then
       local abs_sizeX = (j == 1) and w_multiple1 or w_multiple2
       local sizeZ = turtles[idx].facing * abs_sizeZ
       local sizeX = ( (corner_info[tt.corner].x == 0 and 1 or -1) * turtles[idx].facing ) * abs_sizeX
-      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
 
     -- Single side
@@ -413,7 +428,7 @@ elseif num == 3 then
     local abs_sizeX = w_single
     local sizeZ = turtles[idx].facing * abs_sizeZ
     local sizeX = ( (corner_info[tt.corner].x == 0 and 1 or -1) * turtles[idx].facing ) * abs_sizeX
-    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
   else
     -- Vertical balanced
     local multiple_group, single_group
@@ -445,7 +460,7 @@ elseif num == 3 then
       local abs_sizeZ = (j == 1) and l_multiple1 or l_multiple2
       local sizeZ = turtles[idx].facing * abs_sizeZ
       local sizeX = ( ( (multiple_is_left and 1 or -1) ) * turtles[idx].facing ) * abs_sizeX
-      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+      params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
     end
 
     -- Single side
@@ -458,7 +473,7 @@ elseif num == 3 then
     local abs_sizeZ = total_length
     local sizeZ = turtles[idx].facing * abs_sizeZ
     local sizeX = ( ( (corner_info[tt.corner].x == 0 and 1 or -1) ) * turtles[idx].facing ) * abs_sizeX
-    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
   end
 
 elseif num == 4 then
@@ -476,7 +491,7 @@ elseif num == 4 then
     local abs_sizeX = (corner_info[c].x == 0) and h_parts_w[1] or h_parts_w[2]
     local sizeZ = t.facing * abs_sizeZ
     local sizeX = ( (corner_info[c].x == 0 and 1 or -1) * t.facing ) * abs_sizeX
-    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below
+    params_list[idx] = tostring(sizeZ) .. " " .. tostring(sizeX) .. " " .. tostring(total_depth) .. " " .. debug .. " " .. start_below .. " " .. auto_start
   end
 end
 
@@ -490,6 +505,7 @@ for i = 1, num do
 end
 print("Start below: " .. (start_below == 1 and "Yes" or "No"))
 print("Debug mode: " .. (debug == 1 and "Yes" or "No"))
+print("Auto-start: " .. (auto_start == 1 and "Yes" or "No"))
 
 print("\nPress Enter to send commands to turtles, or Ctrl+T to cancel...")
 read()

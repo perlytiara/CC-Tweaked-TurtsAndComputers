@@ -34,8 +34,13 @@ elseif (#tArgs >= 3) then
 	else
 		bStartBelow = false
 	end
+	if (#tArgs > 5) then
+		bAutoStart = (tonumber(tArgs[6])==1)
+	else
+		bAutoStart = false
+	end
 else
-	print( "Usage: quarry <sq. size> <optional width > <optional fixed depth> <optional 1 for debug mode> <optional 1 for start below>" )
+	print( "Usage: quarry <sq. size> <optional width > <optional fixed depth> <optional 1 for debug mode> <optional 1 for start below> <optional 1 for auto start>" )
 	return
 end
 
@@ -53,8 +58,12 @@ end
 local minFuel = math.ceil((math.ceil(sizeY/3)*(sizeX*sizeY)+(2*sizeY))/1200)
 local maxFuel = "TBD"
 
-print("Place fuel reserves in slot 1 (upper left) if desired and hit any key to start.")
-os.pullEvent("key")
+if bAutoStart then
+	print("Auto-starting quarry (fuel should be in slot 1)...")
+else
+	print("Place fuel reserves in slot 1 (upper left) if desired and hit any key to start.")
+	os.pullEvent("key")
+end
 
 local tX,tZ,tY = 0,0,0    -- Place the turtle starts is considered block 0,0,0 in the turtle's local coordinate system
 local xDir,zDir = 0,1     -- Turtle is considered as initially facing positive z direction, regardless of global world facing direction
@@ -84,6 +93,11 @@ local myTurnRight = turnRight
 if xSign == -1 then
   myTurnLeft = turnRight
   myTurnRight = turnLeft
+end
+
+-- Debug function assignments
+if bDebug then
+  print("Function assignments complete. myTurnLeft: " .. tostring(myTurnLeft) .. ", myTurnRight: " .. tostring(myTurnRight))
 end
 
 -- Notice that all coordinates formated as 0,0,0 are in X,Z,Y order, NOT alphabetical X,Y,Z order, where Y is up/down axis
@@ -729,7 +743,12 @@ while true do -- This loops digging layers
       local backtrackingLayer = (evenWidth and evenLayer)
       
       if ((not evenCol and not backtrackingLayer) or (evenCol and backtrackingLayer)) then
-        myTurnRight() -- turn towards next row
+        if myTurnRight then
+          myTurnRight() -- turn towards next row
+        else
+          print("Error: myTurnRight is nil!")
+          turnRight()
+        end
         if not goForward() then
           print("Fatal Error during goForward from column "..column.." to column "..(column+1).." tX="..tX.." tZ="..tZ.." tY="..tY)
           abort = true
