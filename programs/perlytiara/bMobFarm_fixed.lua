@@ -52,21 +52,12 @@ local function gf()
   end
 end
 local function gb()
-  -- First, try a normal back step
-  if not ensureFuel() then os.sleep(0.5) end
-  if turtle.back() then return end
-  -- If blocked behind, perform a single controlled turnaround to clear and move
-  turtle.turnLeft(); turtle.turnLeft()
-  local attempts = 0
-  while attempts < 5 do
+  while true do
     if not ensureFuel() then os.sleep(0.5) end
-    if turtle.forward() then break end
-    if turtle.detect() then turtle.dig() end
+    if turtle.back() then return end
     if turtle.attack then turtle.attack() end
     os.sleep(SLEEP_RETRY)
-    attempts = attempts + 1
   end
-  turtle.turnLeft(); turtle.turnLeft()
 end
 local function gu()
   while true do
@@ -100,7 +91,10 @@ local function sd()  turtle.suckDown()  end
 local function Df()  turtle.drop()      end
 local function Du()  turtle.dropUp()    end
 local function Dd()  turtle.dropDown()  end
-local function ss(s) turtle.select(s)   end
+local function ss(s)
+  local current = (turtle.getSelectedSlot and turtle.getSelectedSlot()) or nil
+  if current ~= s then turtle.select(s) end
+end
 
 local function askForInputText(textt)
   local at=""
