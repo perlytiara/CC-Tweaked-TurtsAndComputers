@@ -19,7 +19,8 @@ local cVersion  ="v1.01"
 -- Movement helpers now handle obstacles and fuel to prevent getting stuck
 local SLEEP_RETRY = 0.05
 local lastFuelAttemptClock = 0
-local FUEL_ATTEMPT_COOLDOWN = 2.0
+local FUEL_ATTEMPT_COOLDOWN = 10.0
+local rememberedFuelSlot = nil
 local function ensureFuel()
   if not turtle.getFuelLevel then return true end
   local fuelLevel = turtle.getFuelLevel()
@@ -30,10 +31,19 @@ local function ensureFuel()
   end
   lastFuelAttemptClock = nowClock
   local currentSlot = (turtle.getSelectedSlot and turtle.getSelectedSlot()) or 1
+  -- Try remembered fuel slot first
+  if rememberedFuelSlot and turtle.getItemCount(rememberedFuelSlot) > 0 then
+    turtle.select(rememberedFuelSlot)
+    if turtle.refuel(1) then
+      if turtle.select and currentSlot then turtle.select(currentSlot) end
+      return true
+    end
+  end
   for slotIndex = 1, 16 do
     if turtle.getItemCount(slotIndex) > 0 then
       turtle.select(slotIndex)
       if turtle.refuel(1) then
+        rememberedFuelSlot = slotIndex
         if turtle.select and currentSlot then turtle.select(currentSlot) end
         return true
       end
