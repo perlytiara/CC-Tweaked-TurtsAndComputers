@@ -1,4 +1,4 @@
---{program="tPlatform",version="1.10",date="2016-02-28"}
+--{program="tPlatform",version="1.20",date="2025-08-23"}
 ---------------------------------------
 -- tPlatform           by Kaikaku
 -- 2016-02-28, v1.10   checks fuel 
@@ -54,10 +54,36 @@ local function mats()
   end
 end
 
-local function gf()  while not turtle.forward()   do end end
-local function gb()  while not turtle.back()      do end end
-local function gu()  while not turtle.up()        do end end
-local function gd()  while not turtle.down()      do end end
+local function gf()
+  while not turtle.forward() do
+    turtle.attack()
+    turtle.dig()
+    os.sleep(0.2)
+  end
+end
+local function gb()
+  while not turtle.back() do
+    turtle.turnLeft(); turtle.turnLeft()
+    turtle.attack()
+    turtle.dig()
+    turtle.turnLeft(); turtle.turnLeft()
+    os.sleep(0.2)
+  end
+end
+local function gu()
+  while not turtle.up() do
+    turtle.attackUp()
+    turtle.digUp()
+    os.sleep(0.2)
+  end
+end
+local function gd()
+  while not turtle.down() do
+    turtle.attackDown()
+    turtle.digDown()
+    os.sleep(0.2)
+  end
+end
 local function gl()  while not turtle.turnLeft()  do end end
 local function gr()  while not turtle.turnRight() do end end
 local function df()  turtle.dig()       end
@@ -91,6 +117,58 @@ local function checkFuel()
   return tmp
 end
 
+-- Attempt to refuel up to a target fuel level using any fuel items in inventory
+local function autoRefuel(targetFuel)
+  local function tryConsumeFuelInSlots()
+    local consumedAny=false
+    for s=1,16 do
+      if turtle.getItemCount(s)>0 then
+        turtle.select(s)
+        if turtle.refuel(0) then
+          turtle.refuel()
+          consumedAny=true
+          if turtle.getFuelLevel()>=targetFuel then
+            return true
+          end
+        end
+      end
+    end
+    return consumedAny
+  end
+
+  if turtle.getFuelLevel()=="unlimited" then return true end
+
+  while turtle.getFuelLevel()<targetFuel do
+    local madeProgress = tryConsumeFuelInSlots()
+    if turtle.getFuelLevel()>=targetFuel then return true end
+    if not madeProgress then
+      print("Out of fuel. Insert coal/fuel. Waiting "..cSleepTime.."s ...")
+      os.sleep(cSleepTime)
+    end
+  end
+  return true
+end
+
+-- Place a block below the turtle if air; skip if already solid
+local function placeBlockDown()
+  if turtle.detectDown() then return true end
+
+  for s=1,16 do
+    if turtle.getItemCount(s)>0 then
+      turtle.select(s)
+      if not turtle.refuel(0) then
+        if turtle.placeDown() then
+          return true
+        end
+      end
+    end
+  end
+
+  print("No placeable blocks found. Waiting "..cSleepTime.."s ...")
+  os.sleep(cSleepTime)
+  return placeBlockDown()
+end
+
 ------------------------------------------------------------------------------
 -- main ----------------------------------------------------------------------
 ------------------------------------------------------------------------------
@@ -98,7 +176,7 @@ end
 -- step 0 usage hints
 term.clear() term.setCursorPos(1,1)
 print("+-------------------------------------+")
-print("| tPlatform v1.10, by Kaikaku         |")
+print("| tPlatform v1.20, by Kaikaku         |")
 print("+-------------------------------------+")
 print("| Put in building materials in any    |")
 print("|   slot(s) and press enter.          |")
@@ -108,6 +186,7 @@ print("|   by program or with function call, |")
 print("|   e.g., tPlatform 5 10              |")
 print("| If turtle runs out of materials it  |")
 print("|   waits until resupplied.           |")
+print("| Will auto-refuel from inventory.    |")
 print("+-------------------------------------+")
  
 -- step 1 get input
@@ -115,7 +194,7 @@ ss(1)
 if blnAskForParameters then
   askForInputText("Put in materials + press enter!")
   -- step 1.1 get x
-  write("Enter depth x (default&min=3):")
+  write("Enter length x (default&min=3):")
   userX=read()
   if userX==nil or userX=="" then userX=3 end
   userX=tonumber(userX) -- no error check yet
@@ -124,7 +203,7 @@ if blnAskForParameters then
   -- step 1.2 get y
   write("Enter width y (default&min=1):")
   userY=read()
-  if userY==nil or userY=="" then userY=3 end
+  if userY==nil or userY=="" then userY=1 end
   userY=tonumber(userY) -- no error check yet
   --if userY<2 then userY=2 end
 end  
@@ -134,73 +213,44 @@ userY=math.floor(userY)
 -- check fuel level
 local cMinFuel=(userX)*(userY+1)+1
 turtleOk, turtleVal = pcall(checkFuel)
-if turtleVal<cMinFuel then
+autoRefuel(cMinFuel)
+if turtle.getFuelLevel()<cMinFuel then
 term.clear() term.setCursorPos(1,1)
 print("+-------------------------------------+")
-print("| tPlatform v1.10, by Kaikaku         |")
+print("| tPlatform v1.20, by Kaikaku         |")
 print("+-------------------------------------+")
-print("| Please refuel turtle, it needs a    |")
-print("| minimum of about ",cMinFuel," fuel units.")
-print("| Tip: Put some fuel (e.g. coal) in   |")
-print("|      slot 1 and enter: refuel all.  |")
-print("|      This will consume all(!) fuel  |")
-print("|      items in the turtle's inventory|")
+print("| Unable to reach required fuel level |")
+print("| minimum of about ",cMinFuel," units.")
+print("| Insert coal/fuel and restart.       |")
 print("+-------------------------------------+")
 return
 end
 
--- step 2 loopy loops ;)
+-- step 2 build (new)
 print("Let's build something nice:")
--- step 2.1 go to start position 
---          & if odd number go back
-if userY%2==1 then 
-  -- odd number of rows
-  for i=1,userX,1 do gf() end
-  blnDirectionX=false
-else
-  -- even number of rows
-  gf() gf() gl() gl()
-  blnDirectionX=true
-end	
-
--- step 2.2 build it
-for iY=1,userY,1 do
-  for iX=1,userX-1 do
-    if iX==1 then
-	  if iY~=1 then 
-	    if blnDirectionX then
-		  gl() 
-		else
-          gr() 
-		end
-	  end
-	  gb() pf()		
-    elseif  iX==userX-1 then
-	  if iY~=userY then 	    
-	    if blnDirectionX then
-	      -- right turn
-          gr()  
-		else
-		  -- left turn
-		  gl() 
-	  	end	  
-	  end
-	  gb() pf()
-	else -- in between start and end
-	  gb() pf()
-    end
-
+placeBlockDown()
+for row=1,userY do
+  for col=2,userX do
+    gf()
+    placeBlockDown()
   end
-  blnDirectionX=not blnDirectionX
+  if row<userY then
+    if row%2==1 then
+      gr(); gf(); gr()
+    else
+      gl(); gf(); gl()
+    end
+    placeBlockDown()
+  end
 end
--- go back within 1st row
-gr()
-for i=1,userY-1,1 do gb() pf() end
-gl() gb() pf()
-  
+
 print("Done. Looks nice to me ;)")
 os.sleep(0.4)
 print("***************************************")
 print("* Check out YouTube for more videos   *")
 print("* and turtle programs by Kaikaku :)   *")
 print("***************************************")
+return
+
+-- step 2 loopy loops ;
+-- ... existing code ...
