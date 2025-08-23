@@ -62,12 +62,19 @@ local function gf()
   end
 end
 local function gb()
+  -- Try a normal back step
+  if not ensureFuel() then os.sleep(0.5) end
+  if turtle.back() then return end
+  -- If blocked, turn around once and dig/attack until we can move, then turn back
+  turtle.turnLeft(); turtle.turnLeft()
   while true do
     if not ensureFuel() then os.sleep(0.5) end
-    if turtle.back() then return end
+    if turtle.forward() then break end
+    if turtle.detect() then turtle.dig() end
     if turtle.attack then turtle.attack() end
     os.sleep(SLEEP_RETRY)
   end
+  turtle.turnLeft(); turtle.turnLeft()
 end
 local function gu()
   while true do
