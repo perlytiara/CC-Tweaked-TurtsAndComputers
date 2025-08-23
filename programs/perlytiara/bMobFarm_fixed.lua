@@ -52,12 +52,21 @@ local function gf()
   end
 end
 local function gb()
-  while true do
+  -- First, try a normal back step
+  if not ensureFuel() then os.sleep(0.5) end
+  if turtle.back() then return end
+  -- If blocked behind, perform a single controlled turnaround to clear and move
+  turtle.turnLeft(); turtle.turnLeft()
+  local attempts = 0
+  while attempts < 5 do
     if not ensureFuel() then os.sleep(0.5) end
-    if turtle.back() then return end
-    -- Do NOT turn around: prevents spinning and accidental block removal
+    if turtle.forward() then break end
+    if turtle.detect() then turtle.dig() end
+    if turtle.attack then turtle.attack() end
     os.sleep(SLEEP_RETRY)
+    attempts = attempts + 1
   end
+  turtle.turnLeft(); turtle.turnLeft()
 end
 local function gu()
   while true do
