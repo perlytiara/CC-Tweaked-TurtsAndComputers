@@ -18,21 +18,33 @@ local cVersion  ="v1.01"
 ---------------------------------------
 -- Movement helpers now handle obstacles and fuel to prevent getting stuck
 local SLEEP_RETRY = 0.05
+local lastFuelAttemptClock = 0
+local FUEL_ATTEMPT_COOLDOWN = 2.0
 local function ensureFuel()
-  if turtle.getFuelLevel and turtle.getFuelLevel() == 0 then
-    local currentSlot = turtle.getSelectedSlot and turtle.getSelectedSlot() or 1
-    for slotIndex = 1, 16 do
-      if turtle.getItemCount(slotIndex) > 0 then
-        turtle.select(slotIndex)
-        if turtle.refuel(1) then break end
+  if not turtle.getFuelLevel then return true end
+  local fuelLevel = turtle.getFuelLevel()
+  if fuelLevel == "unlimited" or fuelLevel > 0 then return true end
+  local nowClock = (os.clock and os.clock()) or 0
+  if (nowClock - lastFuelAttemptClock) < FUEL_ATTEMPT_COOLDOWN then
+    return false
+  end
+  lastFuelAttemptClock = nowClock
+  local currentSlot = (turtle.getSelectedSlot and turtle.getSelectedSlot()) or 1
+  for slotIndex = 1, 16 do
+    if turtle.getItemCount(slotIndex) > 0 then
+      turtle.select(slotIndex)
+      if turtle.refuel(1) then
+        if turtle.select and currentSlot then turtle.select(currentSlot) end
+        return true
       end
     end
-    if turtle.select and currentSlot then turtle.select(currentSlot) end
   end
+  if turtle.select and currentSlot then turtle.select(currentSlot) end
+  return false
 end
 local function gf()
   while true do
-    ensureFuel()
+    if not ensureFuel() then os.sleep(0.5) end
     if turtle.forward() then return end
     if turtle.detect() then turtle.dig() end
     if turtle.attack then turtle.attack() end
@@ -41,7 +53,7 @@ local function gf()
 end
 local function gb()
   while true do
-    ensureFuel()
+    if not ensureFuel() then os.sleep(0.5) end
     if turtle.back() then return end
     -- Do NOT turn around: prevents spinning and accidental block removal
     os.sleep(SLEEP_RETRY)
@@ -49,7 +61,7 @@ local function gb()
 end
 local function gu()
   while true do
-    ensureFuel()
+    if not ensureFuel() then os.sleep(0.5) end
     if turtle.up() then return end
     if turtle.detectUp then if turtle.detectUp() then turtle.digUp() end end
     if turtle.attackUp then turtle.attackUp() end
@@ -58,7 +70,7 @@ local function gu()
 end
 local function gd()
   while true do
-    ensureFuel()
+    if not ensureFuel() then os.sleep(0.5) end
     if turtle.down() then return end
     if turtle.detectDown then if turtle.detectDown() then turtle.digDown() end end
     if turtle.attackDown then turtle.attackDown() end
