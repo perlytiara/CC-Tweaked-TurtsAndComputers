@@ -40,17 +40,12 @@ local function gf()
   end
 end
 local function gb()
-  ensureFuel()
-  -- Fast path: try to step back a few times without turning
-  for attempt = 1, 3 do
+  while true do
+    ensureFuel()
     if turtle.back() then return end
-    if turtle.attack then turtle.attack() end
+    -- Do NOT turn around: prevents spinning and accidental block removal
     os.sleep(SLEEP_RETRY)
   end
-  -- Fallback: turn around and use forward logic once
-  turtle.turnLeft(); turtle.turnLeft()
-  gf()
-  turtle.turnLeft(); turtle.turnLeft()
 end
 local function gu()
   while true do
