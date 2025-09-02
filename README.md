@@ -52,6 +52,9 @@ Helpful, inspirational, or related repositories:
 - [ottomated/turtle-gambit](https://github.com/ottomated/turtle-gambit)
 - [merlinlikethewizard/Mastermine](https://github.com/merlinlikethewizard/Mastermine)
 - [yazug/computercraft](https://github.com/yazug/computercraft)
+- [Zephira58/CC-Tweaked-Scripts (Xanthus58)](https://github.com/Zephira58/CC-Tweaked-Scripts/tree/main/Xanthus58)
+- [ComputerCraft Forums: Turtle Programs](https://forums.computercraft.cc/index.php?board=5.0) — Community-made turtle programs, mining scripts, automation, and more.
+
 
 ## Docs
 See `docs/` for per-program usage notes.

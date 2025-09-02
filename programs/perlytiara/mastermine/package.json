@@ -1,0 +1,13 @@
+{
+  "name": "mastermine-builder",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build_bundle.js",
+    "check": "node scripts/build_bundle.js --check"
+  }
+}
+
+
+
