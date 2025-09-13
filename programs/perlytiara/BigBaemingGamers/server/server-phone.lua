@@ -56,6 +56,15 @@ function getItemIndex(itemName)
     end
 end
 
+-- Try multiple candidate item ids; returns first slot found or nil
+function getFirstItemIndex(candidates)
+    for i = 1, #candidates, 1 do
+        local idx = getItemIndex(candidates[i])
+        if idx ~= nil then return idx end
+    end
+    return nil
+end
+
 function checkFuel()
     turtle.select(1)
     
@@ -87,7 +96,17 @@ end
 
 function deploy(startCoords, quarySize, endCoords, options)
     --Place turtle from inventory
-    turtle.select(getItemIndex("computercraft:turtle_expanded"))
+    local turtleCandidates = {
+        "computercraft:turtle_advanced",
+        "computercraft:turtle_expanded",
+        "computercraft:turtle_normal",
+    }
+    local turtleSlot = getFirstItemIndex(turtleCandidates)
+    if turtleSlot == nil then
+        print("ERROR: No turtle item found in inventory. Place advanced/normal turtle in inventory.")
+        os.exit(1)
+    end
+    turtle.select(turtleSlot)
     while(turtle.detect()) do
         os.sleep(0.3)
     end
