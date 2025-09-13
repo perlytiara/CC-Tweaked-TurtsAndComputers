@@ -5,7 +5,8 @@ local SLOT_COUNT = 16
 local CLIENT_PORT = 0
 local SERVER_PORT = 420
 
-local modem = peripheral.wrap("left")
+local modem = peripheral.find("modem", function(_, m) return m.isWireless and m.isWireless() end)
+if not modem then error("No wireless modem attached") end
 modem.open(CLIENT_PORT)
 
 function split (inputstr, sep)
