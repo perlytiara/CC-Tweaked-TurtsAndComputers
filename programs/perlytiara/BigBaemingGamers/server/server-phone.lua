@@ -87,7 +87,12 @@ function deployFuelChest()
         print("SERVER NEEDS FUEL...")
         exit(1)
     end
-    turtle.select(getItemIndex("enderstorage:ender_storage"))
+    local chestIdx = getItemIndex("enderstorage:ender_storage")
+    if chestIdx == nil then
+        print("WARN: No EnderStorage found for fuel chest; skipping fuel chest deploy.")
+        return
+    end
+    turtle.select(chestIdx)
     turtle.up()
     turtle.place()
     turtle.down()
@@ -130,10 +135,15 @@ function deploy(startCoords, quarySize, endCoords, options)
             print("SERVER NEEDS FUEL...")
             exit(1)
         end
-        turtle.select(getItemIndex("enderstorage:ender_storage"))
-        turtle.up()
-        turtle.place()
-        turtle.down()
+        local chestIdx = getItemIndex("enderstorage:ender_storage")
+        if chestIdx ~= nil then
+            turtle.select(chestIdx)
+            turtle.up()
+            turtle.place()
+            turtle.down()
+        else
+            print("WARN: withStorage requested but no EnderStorage in inventory; continuing without storage for this bot.")
+        end
     end
     
     deployFuelChest()
@@ -191,11 +201,11 @@ while (true) do
 
     -- Parse out coordinates and options
     local args = split(msg, " ")
-    local withStorage = args[#args]
-    withStorage = withStorage == "1" and true or false
+    local withStorageBit = args[#args]
+    local withStorage = (withStorageBit == "1")
     data = parseParams(msg)
     options = {}
-    options["withStorage"] = true
+    options["withStorage"] = withStorage
 
     target = data[1]
     size = data[2]
