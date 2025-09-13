@@ -103,20 +103,21 @@ end
 -- Helper function to check if a turtle item has a specific upgrade (e.g., modem or tool)
 function hasUpgrade(itemDetail, upgradeType)
     if not itemDetail or not itemDetail.nbt or not itemDetail.nbt.tag or not itemDetail.nbt.tag.upgrades then
+        print("No valid NBT or upgrades data found for item.")
         return false
     end
     local upgrades = itemDetail.nbt.tag.upgrades
     for _, upgrade in ipairs(upgrades) do
         if type(upgrade) == "table" and upgrade.id then
+            print("Found upgrade: " .. (upgrade.id or "unknown"))
             if upgradeType == "mining_tool" then
-                -- Check for pickaxe or similar mining tool
-                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") then
+                -- Broaden check for mining tools (CC: Tweaked might use custom IDs)
+                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") or string.find(upgrade.id, "mining") then
                     return true
                 end
             elseif upgradeType == "modem" then
-                -- Check for any modem (wireless or ender)
+                -- Check for any modem, prefer ender if present
                 if string.find(upgrade.id, "modem") then
-                    -- Prefer ender if present
                     if string.find(upgrade.id, "ender") then
                         print("Detected Ender Modem (unlimited range, cross-dimension).")
                     else
@@ -133,18 +134,18 @@ end
 -- Function to find and select a mining turtle from slot 1 with required upgrades
 function selectMiningTurtle()
     local item = turtle.getItemDetail(1)
-    if item and (item.name == "computercraft:turtle_normal" or item.name == "computercraft:turtle_advanced") then
+    if item and (item.name == "computercraft:turtle_advanced" or item.name == "computercraft:turtle_normal") then
         local hasMiningTool = hasUpgrade(item, "mining_tool")
         local hasModem = hasUpgrade(item, "modem")
         if hasMiningTool and hasModem then
             turtle.select(1)
-            print("Selected mining turtle from slot 1: Advanced/Normal with mining tool and modem.")
+            print("Selected mining turtle from slot 1: " .. item.name .. " with mining tool and modem.")
             return true
         else
-            print("Slot 1 turtle missing mining tool or modem.")
+            print("Slot 1 turtle missing mining tool or modem. Current upgrades: " .. (item.nbt and item.nbt.tag and #item.nbt.tag.upgrades or "0") .. " upgrades.")
         end
     else
-        print("Slot 1 does not contain a valid mining turtle (computercraft:turtle_normal or _advanced).")
+        print("Slot 1 does not contain a valid mining turtle (computercraft:turtle_*).")
     end
     return false
 end
@@ -252,7 +253,6 @@ function deployPair(startCoords, quarySize, endCoords, options)
     local storageBit = options["withStorage"] and 1 or 0
 
     -- Send deployment message to both turtles (broadcast; clients should handle pairing logic)
-    -- Append a pair ID or type if needed; for now, same message, assume client scripts distinguish
     modem.transmit(CLIENT_PORT,
         SERVER_PORT,
         string.format("%d %d %d %d %d %d %d %d %d %d %d", 
@@ -263,8 +263,6 @@ function deployPair(startCoords, quarySize, endCoords, options)
         1  -- Pair flag: 1 for mining, 2 for chunky (clients can filter or use separate channels if needed)
     ))
     
-    -- Broadcast again for chunky, but since same channel, perhaps send with type 2
-    -- For simplicity, assume one broadcast; enhance client-side for pairing
     print("Pair deployed: Mining at front, Chunky tailing behind.")
 end
 
