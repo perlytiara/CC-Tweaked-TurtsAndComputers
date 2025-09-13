@@ -12,7 +12,7 @@ elseif (#arg == 0) then
     print(string.format("No segmentation size selected, defaulting to %d", segmentation))
 else
     print('Too many args given...')
-    exit(1)
+    os.exit(1)
 end
 
 
@@ -56,6 +56,17 @@ function getItemIndex(itemName)
     end
 end
 
+function selectFirstAvailable(itemNames)
+    for i = 1, #itemNames, 1 do
+        local idx = getItemIndex(itemNames[i])
+        if idx ~= nil then
+            turtle.select(idx)
+            return true
+        end
+    end
+    return false
+end
+
 function checkFuel()
     turtle.select(1)
     
@@ -76,18 +87,31 @@ end
 function deployFuelChest()
     if (not checkFuel()) then
         print("SERVER NEEDS FUEL...")
-        exit(1)
+        os.exit(1)
     end
-    turtle.select(getItemIndex("enderstorage:ender_storage"))
-    turtle.up()
-    turtle.place()
-    turtle.down()
+    local idx = getItemIndex("enderstorage:ender_storage")
+    if idx ~= nil then
+        turtle.select(idx)
+        turtle.up()
+        turtle.place()
+        turtle.down()
+    else
+        print("WARN: EnderStorage not found; skipping fuel chest deploy")
+    end
 end
 
 
 function deploy(startCoords, quarySize, endCoords, options)
     --Place turtle from inventory
-    turtle.select(getItemIndex("computercraft:turtle_expanded"))
+    local hasTurtle = selectFirstAvailable({
+        "computercraft:turtle_expanded",
+        "computercraft:turtle_advanced",
+        "computercraft:turtle_normal"
+    })
+    if not hasTurtle then
+        print("ERROR: No turtle item found in inventory (expected computercraft:turtle_*).")
+        os.exit(1)
+    end
     while(turtle.detect()) do
         os.sleep(0.3)
     end
@@ -109,12 +133,17 @@ function deploy(startCoords, quarySize, endCoords, options)
         --Set up ender chest
         if (not checkFuel()) then
             print("SERVER NEEDS FUEL...")
-            exit(1)
+            os.exit(1)
         end
-        turtle.select(getItemIndex("enderstorage:ender_storage"))
-        turtle.up()
-        turtle.place()
-        turtle.down()
+        local idx = getItemIndex("enderstorage:ender_storage")
+        if idx ~= nil then
+            turtle.select(idx)
+            turtle.up()
+            turtle.place()
+            turtle.down()
+        else
+            print("WARN: EnderStorage not found; skipping storage chest deploy")
+        end
     end
     
     deployFuelChest()
@@ -176,7 +205,7 @@ while (true) do
     withStorage = withStorage == "1" and true or false
     data = parseParams(msg)
     options = {}
-    options["withStorage"] = True
+    options["withStorage"] = withStorage
 
     target = data[1]
     size = data[2]
