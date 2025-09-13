@@ -56,6 +56,9 @@ Helpful, inspirational, or related repositories:
 - [ComputerCraft Forums: Turtle Programs](https://forums.computercraft.cc/index.php?board=5.0) — Community-made turtle programs, mining scripts, automation, and more.
 - [Fatboychummy-CC/Dog](https://github.com/Fatboychummy-CC/Dog) — "Dog" uses block scanning peripherals to efficiently find and mine large amounts of ore. Includes installer, flexible include/exclude/only block lists, and advanced options for depth, fuel, and geoscanner range.
 - [exa-byte/CCTurtleRemoteController](https://github.com/exa-byte/CCTurtleRemoteController) — Node.js server and browser UI for remote controlling ComputerCraft turtles via HTTP API. Features live control, inventory/fuel display, block/item textures, and keyboard shortcuts. See setup instructions in their README for details.
+- [BigGamingGamers's Pastebin](https://pastebin.com/u/BigGamingGamers) — Collection of ComputerCraft scripts by Michael Reeves, including automation and farm programs.
+- [Michael-Reeves808's Gists](https://gist.github.com/Michael-Reeves808) — Collection of ComputerCraft scripts including `lift.lua`, `pos.lua`, `bamboo.lua`, and `harvest.lua`.
+
 
 
 ## Docs
