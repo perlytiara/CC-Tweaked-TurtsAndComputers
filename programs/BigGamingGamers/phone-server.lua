@@ -7,12 +7,12 @@ local SLOT_COUNT = 16
 
 local segmentation = 5
 if (#arg == 1) then
-    segmentation = tonumber(arg[1])
+    segmentation = tonumber(arg[1]) or segmentation
 elseif (#arg == 0) then
     print(string.format("No segmentation size selected, defaulting to %d", segmentation))
 else
     print('Too many args given...')
-    exit(1)
+    os.exit()
 end
 
 
@@ -89,7 +89,7 @@ function deploy(startCoords, quarySize, endCoords, options)
     --Place turtle from inventory
     turtle.select(getItemIndex("computercraft:turtle_expanded"))
     while(turtle.detect()) do
-        os.sleep(0.3)
+        if sleep then sleep(0.3) else os.sleep(0.3) end
     end
 
     --Place and turn on turtle
@@ -109,7 +109,7 @@ function deploy(startCoords, quarySize, endCoords, options)
         --Set up ender chest
         if (not checkFuel()) then
             print("SERVER NEEDS FUEL...")
-            exit(1)
+            os.exit()
         end
         turtle.select(getItemIndex("enderstorage:ender_storage"))
         turtle.up()
@@ -176,7 +176,7 @@ while (true) do
     withStorage = withStorage == "1" and true or false
     data = parseParams(msg)
     options = {}
-    options["withStorage"] = True
+    options["withStorage"] = true
 
     target = data[1]
     size = data[2]
@@ -194,7 +194,7 @@ while (true) do
         local sclaedSize = vector.new(width, size.y, height)
 
         deploy(offsetTarget, sclaedSize, finish, options)
-        os.sleep(1)
+        if sleep then sleep(1) else os.sleep(1) end
         print(string.format( "Deploying to;  %d %d %d    %d %d",  target.x + xOffset, target.y, target.z + zOffset, sclaedSize.x, sclaedSize.z))
     end
 

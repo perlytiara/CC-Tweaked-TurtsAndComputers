@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+  "workspace.library": [
+    "./",
+    "./types"
+  ],
+  "workspace.maxPreload": 2000,
+  "workspace.preloadFileSize": 5000,
+  "runtime.version": "Lua 5.1",
+  "diagnostics.globals": [
+    "sleep", "http", "fs", "turtle", "peripheral", "redstone", "gps", "vector", "keys", "colors",
+    "term", "shell", "read", "write", "arg", "os", "bit32",
+    "rs", "exit", "ss", "pd", "gf", "gic", "iPage", "iPageMax", "ni"
+  ],
+  "diagnostics.disable": [
+    "lowercase-global",
+    "cast-local-type",
+    "inject-field",
+    "need-check-nil",
+    "deprecated"
+  ],
+  "hint.enable": true,
+  "telemetry.enable": false
+}
+

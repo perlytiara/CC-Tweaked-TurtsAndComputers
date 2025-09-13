@@ -176,7 +176,7 @@ while (true) do
     withStorage = withStorage == "1" and true or false
     data = parseParams(msg)
     options = {}
-    options["withStorage"] = True
+    options["withStorage"] = true
 
     target = data[1]
     size = data[2]

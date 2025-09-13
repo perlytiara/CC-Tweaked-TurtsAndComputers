@@ -3,7 +3,7 @@ local SLOT_COUNT = 16
 local modem = peripheral.wrap("left")
 modem.open(100)
 
-function checkFuel()
+local function checkFuel()
     turtle.select(1)
     
     if(turtle.getFuelLevel() < 50) then
@@ -21,7 +21,7 @@ function checkFuel()
     end
 end
 
-function getItemIndex(itemName)
+local function getItemIndex(itemName)
     for slot = 1, SLOT_COUNT, 1 do
         local item = turtle.getItemDetail(slot)
         if(item ~= nil) then
@@ -34,7 +34,7 @@ end
 
 
 print("Waiting for signal")
-event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
+local event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
 
 while(true) do
     checkFuel()
