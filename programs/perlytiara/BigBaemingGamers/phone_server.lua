@@ -100,72 +100,26 @@ function deployFuelChest()
     end
 end
 
--- Helper function to check if a turtle item has a specific upgrade (e.g., modem or tool)
-function hasUpgrade(itemDetail, upgradeType)
-    if not itemDetail or not itemDetail.nbt or not itemDetail.nbt.tag or not itemDetail.nbt.tag.upgrades then
-        print("No valid NBT or upgrades data found for item. NBT: " .. (itemDetail.nbt and textutils.serialize(itemDetail.nbt) or "nil"))
-        return false
-    end
-    local upgrades = itemDetail.nbt.tag.upgrades
-    print("Found " .. #upgrades .. " upgrades. Checking: ")
-    for _, upgrade in ipairs(upgrades) do
-        if type(upgrade) == "table" and upgrade.id then
-            print("  Upgrade ID: " .. (upgrade.id or "unknown"))
-            if upgradeType == "mining_tool" then
-                -- Broaden check for mining tools (CC: Tweaked might use custom IDs)
-                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") or string.find(upgrade.id, "mining") or 
-                   upgrade.id == "cc_tweaked:mining_pickaxe" or upgrade.id == "minecraft:diamond_pickaxe" then
-                    print("  Detected mining tool: " .. upgrade.id)
-                    return true
-                end
-            elseif upgradeType == "modem" then
-                -- Check for any modem, prefer ender if present
-                if string.find(upgrade.id, "modem") or upgrade.id == "cc_tweaked:wireless_modem" then
-                    if string.find(upgrade.id, "ender") then
-                        print("  Detected Ender Modem (unlimited range, cross-dimension).")
-                    else
-                        print("  Detected Wireless Modem (limited range, same dimension).")
-                    end
-                    return true
-                end
-            end
-        end
-    end
-    print("No matching upgrade found for " .. upgradeType)
-    return false
-end
-
--- Function to find and select a mining turtle from slot 1 with required upgrades
+-- Function to validate mining turtle in slot 1
 function selectMiningTurtle()
     local item = turtle.getItemDetail(1)
     if item and (item.name == "computercraft:turtle_advanced" or item.name == "computercraft:turtle_normal") then
-        local hasMiningTool = hasUpgrade(item, "mining_tool")
-        local hasModem = hasUpgrade(item, "modem")
-        if hasMiningTool and hasModem then
-            turtle.select(1)
-            print("Selected mining turtle from slot 1: " .. item.name .. " with mining tool and modem.")
-            return true
-        else
-            print("Slot 1 turtle missing mining tool or modem. Current upgrades: " .. (item.nbt and item.nbt.tag and #item.nbt.tag.upgrades or "0") .. " upgrades.")
-        end
+        turtle.select(1)
+        print("Selected mining turtle from slot 1: " .. item.name)
+        return true
     else
-        print("Slot 1 does not contain a valid mining turtle (computercraft:turtle_*).")
+        print("Slot 1 does not contain a valid mining turtle (computercraft:turtle_advanced or computercraft:turtle_normal).")
     end
     return false
 end
 
--- Function to find and select a chunky turtle from slot 2 with required upgrades
+-- Function to validate chunky turtle in slot 2
 function selectChunkyTurtle()
     local item = turtle.getItemDetail(2)
     if item and item.name == "advancedperipherals:chunky_turtle" then
-        local hasModem = hasUpgrade(item, "modem")
-        if hasModem then
-            turtle.select(2)
-            print("Selected chunky turtle from slot 2: advancedperipherals:chunky_turtle with modem.")
-            return true
-        else
-            print("Slot 2 chunky turtle missing modem.")
-        end
+        turtle.select(2)
+        print("Selected chunky turtle from slot 2: advancedperipherals:chunky_turtle")
+        return true
     else
         print("Slot 2 does not contain a valid chunky turtle (advancedperipherals:chunky_turtle).")
     end
@@ -180,9 +134,9 @@ function deployPair(startCoords, quarySize, endCoords, options)
         error('Server out of fuel', 0)
     end
 
-    -- Select and place mining turtle from slot 1 (pre-checked for upgrades)
+    -- Select and place mining turtle from slot 1
     if not selectMiningTurtle() then
-        print("ERROR: No valid mining turtle found in slot 1 (must be computercraft:turtle_* with mining tool and modem).")
+        print("ERROR: Please place an Advanced Wireless Mining Turtle in slot 1 (must be computercraft:turtle_advanced or computercraft:turtle_normal).")
         error('Missing valid mining turtle in slot 1', 0)
     end
     while(turtle.detect()) do
@@ -216,9 +170,9 @@ function deployPair(startCoords, quarySize, endCoords, options)
         os.sleep(0.3)
     end
     
-    -- Select chunky turtle from slot 2 (pre-checked)
+    -- Select chunky turtle from slot 2
     if not selectChunkyTurtle() then
-        print("ERROR: No valid chunky turtle found in slot 2 (must be advancedperipherals:chunky_turtle with modem).")
+        print("ERROR: Please place an Advanced Wireless Chunky Turtle in slot 2 (must be advancedperipherals:chunky_turtle).")
         error('Missing valid chunky turtle in slot 2', 0)
     end
     
