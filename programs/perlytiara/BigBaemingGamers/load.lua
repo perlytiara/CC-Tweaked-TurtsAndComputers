@@ -43,6 +43,11 @@ local manifest = {
         "utils/refuel-test.lua",
         "utils/upward-quarry-test.lua",
     },
+    ["programs/perlytiara/BigBaemingGamers/@gps"] = {
+        -- @gps scripts
+        "@gps/gps.lua",
+        "@gps/gps-host.lua",
+    },
 }
 
 local function ensureDir(path)
@@ -126,11 +131,24 @@ local function loadAll()
 end
 
 local function loadSingle()
-    -- Assume single directory in manifest
+    -- Let user select directory first if more than one
+    local dirs = {}
+    for d, _ in pairs(manifest) do
+        table.insert(dirs, d)
+    end
     local dir, files
-    for d, f in pairs(manifest) do
-        dir, files = d, f
-        break
+    if #dirs > 1 then
+        print('Select a directory:')
+        local dirIdx = promptSelect(dirs)
+        if not dirIdx then
+            print('Invalid directory selection')
+            return
+        end
+        dir = dirs[dirIdx]
+        files = manifest[dir]
+    else
+        dir = dirs[1]
+        files = manifest[dir]
     end
     print('Select a file to load:')
     local idx = promptSelect(files)
@@ -150,8 +168,8 @@ else
         if target == 'all' then
             loadAll()
         else
+            local found = false
             for dir, files in pairs(manifest) do
-                local found = false
                 for i = 1, #files, 1 do
                     if files[i] == target then
                         loadFiles(dir, { target })
@@ -160,6 +178,9 @@ else
                     end
                 end
                 if found then break end
+            end
+            if not found then
+                print('File not found in manifest: ' .. target)
             end
         end
     else
@@ -175,5 +196,3 @@ else
         end
     end
 end
-
-

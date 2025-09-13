@@ -41,6 +41,10 @@ local manifest = {
         "utils/refuel-test.lua",
         "utils/upward-quarry-test.lua",
     },
+    ["programs/perlytiara/gps"] = {
+        "gps.lua",
+        "gps_host.lua",
+    },
 }
 
 local function ensureDir(path)
@@ -181,8 +185,13 @@ local function updateAll()
 end
 
 local function updateSingle()
-    local dir, files
-    for d, f in pairs(manifest) do dir, files = d, f break end
+    local dirs = {}
+    for d, _ in pairs(manifest) do table.insert(dirs, d) end
+    print('Select directory:')
+    local dirIdx = promptSelect(dirs)
+    if not dirIdx then print('Invalid selection') return end
+    local dir = dirs[dirIdx]
+    local files = manifest[dir]
     print('Select file to update:')
     local idx = promptSelect(files)
     if not idx then print('Invalid selection') return end
@@ -190,8 +199,13 @@ local function updateSingle()
 end
 
 local function removeOne()
-    local dir, files
-    for d, f in pairs(manifest) do dir, files = d, f break end
+    local dirs = {}
+    for d, _ in pairs(manifest) do table.insert(dirs, d) end
+    print('Select directory:')
+    local dirIdx = promptSelect(dirs)
+    if not dirIdx then print('Invalid selection') return end
+    local dir = dirs[dirIdx]
+    local files = manifest[dir]
     print('Select file to remove locally:')
     local idx = promptSelect(files)
     if not idx then print('Invalid selection') return end
@@ -216,14 +230,20 @@ else
             updateAll()
         elseif cmd == 'rm' and arg[2] then
             local target = tostring(arg[2])
-            local dir, files
-            for d, f in pairs(manifest) do dir, files = d, f break end
             local found = false
-            for i = 1, #files, 1 do
-                if files[i] == target then found = true break end
+            local foundDir = nil
+            for dir, files in pairs(manifest) do
+                for i = 1, #files, 1 do
+                    if files[i] == target then
+                        found = true
+                        foundDir = dir
+                        break
+                    end
+                end
+                if found then break end
             end
-            if found then
-                local localDir = '/' .. dir
+            if found and foundDir then
+                local localDir = '/' .. foundDir
                 local localPath = localDir .. '/' .. target
                 if fs.exists(localPath) then fs.delete(localPath) print('Removed: ' .. localPath) else print('Not found: ' .. localPath) end
             else
@@ -232,11 +252,19 @@ else
         else
             -- assume single-file update by name
             local target = cmd
-            local dir, files
-            for d, f in pairs(manifest) do dir, files = d, f break end
             local found = false
-            for i = 1, #files, 1 do if files[i] == target then found = true break end end
-            if found then updateDir(dir, { target }) else print('Unknown file: ' .. target) end
+            local foundDir = nil
+            for dir, files in pairs(manifest) do
+                for i = 1, #files, 1 do
+                    if files[i] == target then
+                        found = true
+                        foundDir = dir
+                        break
+                    end
+                end
+                if found then break end
+            end
+            if found and foundDir then updateDir(foundDir, { target }) else print('Unknown file: ' .. target) end
         end
     else
         while true do
@@ -253,5 +281,3 @@ else
         end
     end
 end
-
-

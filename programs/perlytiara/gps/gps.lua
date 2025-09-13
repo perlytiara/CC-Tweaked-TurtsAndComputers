@@ -1,0 +1,2 @@
+-- startup
+shell.run("repeat")
