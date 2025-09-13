@@ -42,11 +42,17 @@ local manifest = {
         "utils/ractor.lua",
         "utils/refuel-test.lua",
         "utils/upward-quarry-test.lua",
+        -- loader and updater aliases
+        "@load.lua",
+        "@update.lua",
+        "load.lua",
+        "update.lua",
     },
     ["programs/perlytiara/BigBaemingGamers/@gps"] = {
         -- @gps scripts
         "@gps/gps.lua",
         "@gps/gps-host.lua",
+        "@gps/gps-client.lua",
     },
 }
 
@@ -131,25 +137,17 @@ local function loadAll()
 end
 
 local function loadSingle()
-    -- Let user select directory first if more than one
+    -- Select directory first
     local dirs = {}
-    for d, _ in pairs(manifest) do
-        table.insert(dirs, d)
+    for d, _ in pairs(manifest) do table.insert(dirs, d) end
+    print('Select directory:')
+    local dirIdx = promptSelect(dirs)
+    if not dirIdx then
+        print('Invalid selection')
+        return
     end
-    local dir, files
-    if #dirs > 1 then
-        print('Select a directory:')
-        local dirIdx = promptSelect(dirs)
-        if not dirIdx then
-            print('Invalid directory selection')
-            return
-        end
-        dir = dirs[dirIdx]
-        files = manifest[dir]
-    else
-        dir = dirs[1]
-        files = manifest[dir]
-    end
+    local dir = dirs[dirIdx]
+    local files = manifest[dir]
     print('Select a file to load:')
     local idx = promptSelect(files)
     if not idx then
@@ -180,7 +178,7 @@ else
                 if found then break end
             end
             if not found then
-                print('File not found in manifest: ' .. target)
+                print('Unknown file: ' .. target)
             end
         end
     else

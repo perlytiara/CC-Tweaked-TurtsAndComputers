@@ -40,10 +40,16 @@ local manifest = {
         "utils/ractor.lua",
         "utils/refuel-test.lua",
         "utils/upward-quarry-test.lua",
+        -- loader and updater aliases
+        "@load.lua",
+        "@update.lua",
+        "load.lua",
+        "update.lua",
     },
-    ["programs/perlytiara/gps"] = {
-        "gps.lua",
-        "gps_host.lua",
+    ["programs/perlytiara/BigBaemingGamers/@gps"] = {
+        -- @gps scripts
+        "@gps/gps.lua",
+        "@gps/gps-host.lua",
     },
 }
 
@@ -109,7 +115,7 @@ local function removeStale(localDir, keepSet)
                 if #fs.list(full) == 0 then fs.delete(full) end
             else
                 -- Do not delete the loader/updater themselves at root
-                if relPath ~= 'load.lua' and relPath ~= 'update.lua' and not keepSet[relPath] then
+                if relPath ~= 'load.lua' and relPath ~= 'update.lua' and relPath ~= '@load.lua' and relPath ~= '@update.lua' and not keepSet[relPath] then
                     fs.delete(full)
                     print('Removed stale: ' .. full)
                 end

@@ -1,0 +1,9 @@
+-- Alias: delegates to load.lua in this collection
+local target = "/programs/perlytiara/BigBaemingGamers/load.lua"
+if fs.exists(target) then
+    shell.run(target, table.unpack(arg))
+else
+    print("Missing " .. target .. " — ensure files are installed.")
+end
+
+
