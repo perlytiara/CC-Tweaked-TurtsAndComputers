@@ -103,31 +103,35 @@ end
 -- Helper function to check if a turtle item has a specific upgrade (e.g., modem or tool)
 function hasUpgrade(itemDetail, upgradeType)
     if not itemDetail or not itemDetail.nbt or not itemDetail.nbt.tag or not itemDetail.nbt.tag.upgrades then
-        print("No valid NBT or upgrades data found for item.")
+        print("No valid NBT or upgrades data found for item. NBT: " .. (itemDetail.nbt and textutils.serialize(itemDetail.nbt) or "nil"))
         return false
     end
     local upgrades = itemDetail.nbt.tag.upgrades
+    print("Found " .. #upgrades .. " upgrades. Checking: ")
     for _, upgrade in ipairs(upgrades) do
         if type(upgrade) == "table" and upgrade.id then
-            print("Found upgrade: " .. (upgrade.id or "unknown"))
+            print("  Upgrade ID: " .. (upgrade.id or "unknown"))
             if upgradeType == "mining_tool" then
                 -- Broaden check for mining tools (CC: Tweaked might use custom IDs)
-                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") or string.find(upgrade.id, "mining") then
+                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") or string.find(upgrade.id, "mining") or 
+                   upgrade.id == "cc_tweaked:mining_pickaxe" or upgrade.id == "minecraft:diamond_pickaxe" then
+                    print("  Detected mining tool: " .. upgrade.id)
                     return true
                 end
             elseif upgradeType == "modem" then
                 -- Check for any modem, prefer ender if present
-                if string.find(upgrade.id, "modem") then
+                if string.find(upgrade.id, "modem") or upgrade.id == "cc_tweaked:wireless_modem" then
                     if string.find(upgrade.id, "ender") then
-                        print("Detected Ender Modem (unlimited range, cross-dimension).")
+                        print("  Detected Ender Modem (unlimited range, cross-dimension).")
                     else
-                        print("Detected Wireless Modem (limited range, same dimension).")
+                        print("  Detected Wireless Modem (limited range, same dimension).")
                     end
                     return true
                 end
             end
         end
     end
+    print("No matching upgrade found for " .. upgradeType)
     return false
 end
 
