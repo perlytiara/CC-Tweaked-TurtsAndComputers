@@ -100,19 +100,28 @@ function deployFuelChest()
     end
 end
 
--- Helper function to check if a turtle item has a specific peripheral
-function hasPeripheral(itemDetail, peripheralName)
-    if not itemDetail or not itemDetail.nbt then
+-- Helper function to check if a turtle item has a specific upgrade (e.g., modem or tool)
+function hasUpgrade(itemDetail, upgradeType)
+    if not itemDetail or not itemDetail.nbt or not itemDetail.nbt.tag or not itemDetail.nbt.tag.upgrades then
         return false
     end
-    local nbt = itemDetail.nbt
-    -- Check for peripheral in left or right slots (common for modems)
-    if nbt.tag and nbt.tag["turtleInventory"] then
-        -- This is complex; in practice, you might need to place and inspect, but for script, assume
-        -- For simplicity, we'll check if the peripheral is mentioned in the item's NBT under upgrades
-        if nbt.tag.upgrades then
-            for _, upgrade in ipairs(nbt.tag.upgrades) do
-                if type(upgrade) == "table" and upgrade.id == peripheralName then
+    local upgrades = itemDetail.nbt.tag.upgrades
+    for _, upgrade in ipairs(upgrades) do
+        if type(upgrade) == "table" and upgrade.id then
+            if upgradeType == "mining_tool" then
+                -- Check for pickaxe or similar mining tool
+                if string.find(upgrade.id, "pickaxe") or string.find(upgrade.id, "drill") then
+                    return true
+                end
+            elseif upgradeType == "modem" then
+                -- Check for any modem (wireless or ender)
+                if string.find(upgrade.id, "modem") then
+                    -- Prefer ender if present
+                    if string.find(upgrade.id, "ender") then
+                        print("Detected Ender Modem (unlimited range, cross-dimension).")
+                    else
+                        print("Detected Wireless Modem (limited range, same dimension).")
+                    end
                     return true
                 end
             end
@@ -121,41 +130,39 @@ function hasPeripheral(itemDetail, peripheralName)
     return false
 end
 
--- Function to find and select a mining turtle from slot 1 with required peripherals
+-- Function to find and select a mining turtle from slot 1 with required upgrades
 function selectMiningTurtle()
     local item = turtle.getItemDetail(1)
     if item and (item.name == "computercraft:turtle_normal" or item.name == "computercraft:turtle_advanced") then
-        -- Check for mining tool (e.g., pickaxe in left upgrade)
-        local hasMiningTool = false
-        local hasEnderModem = hasPeripheral(item, "enderiomodem")  -- Assume Ender IO ender modem ID
-        local hasWirelessModem = hasPeripheral(item, "wirelessmodem")  -- CC wireless modem
-        if item.nbt and item.nbt.tag and item.nbt.tag.upgrades then
-            for _, upgrade in ipairs(item.nbt.tag.upgrades) do
-                if type(upgrade) == "table" then
-                    if upgrade.id == "pickaxe" or upgrade.id == "diamond_pickaxe" then  -- Mining tool
-                        hasMiningTool = true
-                    end
-                end
-            end
-        end
-        if hasMiningTool and hasEnderModem and hasWirelessModem then
+        local hasMiningTool = hasUpgrade(item, "mining_tool")
+        local hasModem = hasUpgrade(item, "modem")
+        if hasMiningTool and hasModem then
             turtle.select(1)
+            print("Selected mining turtle from slot 1: Advanced/Normal with mining tool and modem.")
             return true
+        else
+            print("Slot 1 turtle missing mining tool or modem.")
         end
+    else
+        print("Slot 1 does not contain a valid mining turtle (computercraft:turtle_normal or _advanced).")
     end
     return false
 end
 
--- Function to find and select a chunky turtle from slot 2
+-- Function to find and select a chunky turtle from slot 2 with required upgrades
 function selectChunkyTurtle()
     local item = turtle.getItemDetail(2)
     if item and item.name == "advancedperipherals:chunky_turtle" then
-        local hasWirelessModem = hasPeripheral(item, "wirelessmodem")
-        local hasEnderModem = hasPeripheral(item, "enderiomodem")
-        if hasWirelessModem and hasEnderModem then
+        local hasModem = hasUpgrade(item, "modem")
+        if hasModem then
             turtle.select(2)
+            print("Selected chunky turtle from slot 2: advancedperipherals:chunky_turtle with modem.")
             return true
+        else
+            print("Slot 2 chunky turtle missing modem.")
         end
+    else
+        print("Slot 2 does not contain a valid chunky turtle (advancedperipherals:chunky_turtle).")
     end
     return false
 end
@@ -168,9 +175,9 @@ function deployPair(startCoords, quarySize, endCoords, options)
         error('Server out of fuel', 0)
     end
 
-    -- Select and place mining turtle from slot 1 (pre-checked for peripherals)
+    -- Select and place mining turtle from slot 1 (pre-checked for upgrades)
     if not selectMiningTurtle() then
-        print("ERROR: No valid mining turtle found in slot 1 (must be computercraft:turtle_* with mining tool, ender modem, and wireless modem).")
+        print("ERROR: No valid mining turtle found in slot 1 (must be computercraft:turtle_* with mining tool and modem).")
         error('Missing valid mining turtle in slot 1', 0)
     end
     while(turtle.detect()) do
@@ -206,7 +213,7 @@ function deployPair(startCoords, quarySize, endCoords, options)
     
     -- Select chunky turtle from slot 2 (pre-checked)
     if not selectChunkyTurtle() then
-        print("ERROR: No valid chunky turtle found in slot 2 (must be advancedperipherals:chunky_turtle with wireless modem and ender modem).")
+        print("ERROR: No valid chunky turtle found in slot 2 (must be advancedperipherals:chunky_turtle with modem).")
         error('Missing valid chunky turtle in slot 2', 0)
     end
     
