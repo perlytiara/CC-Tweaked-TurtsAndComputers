@@ -12,7 +12,7 @@ elseif (#arg == 0) then
     print(string.format("No segmentation size selected, defaulting to %d", segmentation))
 else
     print('Too many args given...')
-    os.exit(1)
+    error('Too many args given...', 0)
 end
 
 
@@ -87,7 +87,7 @@ end
 function deployFuelChest()
     if (not checkFuel()) then
         print("SERVER NEEDS FUEL...")
-        os.exit(1)
+        error('Server out of fuel', 0)
     end
     local idx = getItemIndex("enderstorage:ender_storage")
     if idx ~= nil then
@@ -110,7 +110,7 @@ function deploy(startCoords, quarySize, endCoords, options)
     })
     if not hasTurtle then
         print("ERROR: No turtle item found in inventory (expected computercraft:turtle_*).")
-        os.exit(1)
+        error('Missing client turtle item', 0)
     end
     while(turtle.detect()) do
         os.sleep(0.3)
@@ -124,8 +124,8 @@ function deploy(startCoords, quarySize, endCoords, options)
     --Wait for client to send ping
     event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
     if(msg ~= "CLIENT_DEPLOYED") then
-        print("No client deploy message, exitting...")
-        os.exit()
+        print("No client deploy message, exiting...")
+        error('Client deploy handshake failed', 0)
     end
 
     
@@ -133,7 +133,7 @@ function deploy(startCoords, quarySize, endCoords, options)
         --Set up ender chest
         if (not checkFuel()) then
             print("SERVER NEEDS FUEL...")
-            os.exit(1)
+            error('Server out of fuel', 0)
         end
         local idx = getItemIndex("enderstorage:ender_storage")
         if idx ~= nil then
