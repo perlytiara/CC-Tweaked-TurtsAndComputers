@@ -54,7 +54,7 @@ local blnStripMine   =false
 -- Chunky turtle variables
 local chunkyTurtleId = nil
 local blnUseChunky = false
-local chunkyPosition = {x = -1, y = 0, z = 0, facing = 0} -- relative position of chunky turtle (behind/left) 
+local chunkyPosition = {x = 0, y = 0, z = -1, facing = 0} -- relative position of chunky turtle (to the left) 
 
 ---------------------------------------
 ---- Early UI functions ---------------
@@ -581,10 +581,11 @@ end
 
 local function moveChunkyTurtle(mainX, mainY, mainZ, mainFacing)
 	if blnUseChunky and chunkyTurtleId then
-		-- Calculate chunky turtle position relative to main turtle (behind/to the left)
-		local chunkyX = mainX - 1  -- Behind the main turtle
+		-- Calculate chunky turtle position relative to main turtle (to the left side)
+		-- Chunky turtle should be at same height, same Y level, but offset to the left
+		local chunkyX = mainX      -- Same X position (depth)
 		local chunkyY = mainY      -- Same height
-		local chunkyZ = mainZ      -- Same lateral position
+		local chunkyZ = mainZ - 1  -- One block to the left (negative Z)
 		local chunkyFacing = mainFacing  -- Same facing direction
 		
 		rednet.send(chunkyTurtleId, {
@@ -810,9 +811,17 @@ if hasModem then
 	print("Looking for chunky turtle...")
 	if findChunkyTurtle() then
 		print("Chunky turtle paired successfully!")
+		-- Wait for chunky turtle to confirm pairing
+		print("Waiting for chunky turtle confirmation...")
+		sleep(2)
+		-- Send initial position to chunky turtle
+		moveChunkyTurtle(tPos[1], tPos[2], tPos[3], tPos[4])
+		print("Chunky turtle positioned and ready!")
 	else
 		print("No chunky turtle found - continuing without chunk loading")
 	end
+else
+	print("No modem found - chunky turtle pairing disabled")
 end
 
 ------------------------------------------------------------------------------

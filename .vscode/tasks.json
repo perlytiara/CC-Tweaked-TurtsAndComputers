@@ -1,0 +1,52 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Connect to Turtle",
+            "type": "shell",
+            "command": "echo",
+            "args": ["Use the CraftOS-PC extension sidebar to connect to your turtle"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Deploy Turtle Manager",
+            "type": "shell",
+            "command": "echo",
+            "args": [
+                "1. Connect to turtle via CraftOS-PC extension",
+                "2. Copy turtle-manager/startup.lua to turtle root",
+                "3. Copy other manager scripts to turtle-manager/ folder",
+                "4. Run 'startup' on turtle for management interface"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Show Available Programs",
+            "type": "shell",
+            "command": "find",
+            "args": ["programs", "-name", "*.lua", "-type", "f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

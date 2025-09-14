@@ -29,7 +29,7 @@ local blnDebugPrint = true
 ---------------------------------------
 local masterTurtleId = nil
 local chunkLoadingInterval = 2 -- seconds between chunk loading signals
-local position = {x = 0, y = 0, z = 0, facing = 0} -- relative to master
+local position = {x = 0, y = 0, z = -1, facing = 0} -- relative to master (to the left)
 local isActive = false
 
 ---------------------------------------
@@ -235,7 +235,8 @@ local function processMessage(message)
 	elseif message.type == "pair" then
 		masterTurtleId = message.masterId
 		isActive = true
-		debugPrint("Paired with master turtle " .. masterTurtleId)
+		print("SUCCESS: Paired with master turtle " .. masterTurtleId)
+		print("Chunky turtle is now active and ready to follow!")
 		sendStatus("paired", {chunkyId = os.getComputerID()})
 		return true
 		

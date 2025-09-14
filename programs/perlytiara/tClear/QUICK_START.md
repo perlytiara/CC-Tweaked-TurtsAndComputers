@@ -4,9 +4,9 @@
 
 ### 1. Place Turtles
 ```
-[Mining] [Chunky] ← Your starting position
+[Chunky] [Mining] ← Your starting position
 ```
-**Note:** Chunky turtle goes BEHIND (to the left of) the mining turtle
+**Note:** Chunky turtle goes to the LEFT of the mining turtle at SAME HEIGHT
 
 ### 2. Get IDs
 On each turtle: `print(os.getComputerID())`
@@ -73,7 +73,9 @@ tClear_multi                     # Follow prompts for 2-turtle setup
 - Restart both turtles if needed
 
 ## 📍 Placement Rules
-- Chunky turtle goes **BEHIND** (left of) mining turtle
+- Chunky turtle goes to the **LEFT** of mining turtle
+- **SAME HEIGHT** as mining turtle
+- **SAME FACING DIRECTION** as mining turtle
 - Clear path for chunky turtle to follow
 - Avoid lava and dangerous areas
 

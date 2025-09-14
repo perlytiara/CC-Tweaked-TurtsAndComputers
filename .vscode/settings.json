@@ -1,0 +1,11 @@
+{
+    "http.systemCertificates": false,
+    "craftos-pc.autoConnect": true,
+    "craftos-pc.showTerminal": true,
+    "lua.workspace.library": [
+        "${workspaceFolder}/types"
+    ],
+    "lua.diagnostics.globals": [
+        "turtle", "peripheral", "redstone", "gps", "vector", "term", "bit32"
+    ]
+}
