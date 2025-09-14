@@ -29,6 +29,17 @@ local function parseAndRun(message)
 	if type(message) == "table" then
 		if message.command == "RUN" and (message.program == "tClear" or message.program == "tclear") then
 			argsString = tostring(message.args or "")
+		elseif message.command == "RUN" and message.program == "tClearChunky" then
+			-- Handle chunky turtle requests
+			print("Starting chunky turtle mode...")
+			local ok, err = pcall(function()
+				shell.run("tClearChunky")
+			end)
+			if not ok then
+				print("tClearChunky failed: " .. tostring(err))
+				return false, err
+			end
+			return true
 		else
 			-- Unknown table; ignore
 			return false, "unsupported-table"
@@ -62,7 +73,7 @@ while true do
 	local senderId, message, protocol = rednet.receive()
 	-- Only act on messages that look like ours
 	local handled = false
-	if protocol == nil or protocol == "tclear-run" or protocol == "tclear" then
+	if protocol == nil or protocol == "tclear-run" or protocol == "tclear" or protocol == "tclear-chunky" then
 		local ok = false
 		ok = select(1, parseAndRun(message))
 		handled = ok

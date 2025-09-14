@@ -60,6 +60,53 @@ Helpful, inspirational, or related repositories:
 - [Michael-Reeves808's Gists](https://gist.github.com/Michael-Reeves808) — Collection of ComputerCraft scripts including `lift.lua`, `pos.lua`, `bamboo.lua`, and `harvest.lua`.
 
 
+### Michael Reeves' Turtle Code
+
+A popular mining turtle script by Michael Reeves was shared on Reddit ([source](https://www.reddit.com/r/MichaelReeves/comments/jz4soa/minecraft_turtle_code/)). This script is designed for ComputerCraft turtles in Minecraft and automates mining in a straight tunnel, handling obstacles and inventory.
+
+**Key features:**
+- Mines a 3x2 tunnel forward.
+- Handles fuel and inventory management.
+- Avoids lava and places torches if configured.
+
+**How to use:**
+1. Place the script on your turtle (e.g., `mine.lua`).
+2. Ensure the turtle has fuel and torches (if needed).
+3. Run the script with the desired tunnel length:  
+   ```
+   lua mine.lua 100
+   ```
+   (Replace `100` with your desired tunnel length.)
+
+**Example script:**  
+You can find the original and discussion [here](https://www.reddit.com/r/MichaelReeves/comments/jz4soa/minecraft_turtle_code/).  
+A cleaned-up version is also available in [Michael-Reeves808's Gists](https://gist.github.com/Michael-Reeves808).
+
+
+## Remote Mining Setup Guide
+
+For more detailed instructions, see the [Remote miners setup guide](https://docs.google.com/document/d/1Ni4TG92eK2tLnDUl6Sh1mCXobvsoB0QAUr0Rn_HyVfk/edit?tab=t.0).
+
+**Quick steps:**
+1. **Prepare Turtles (Workers):**
+   - Attach a wireless modem to each turtle.
+   - Place fuel in the expected slot (commonly slot 16).
+   - Copy and run `programs/perlytiara/tClear/tClear_listener.lua` on each turtle.
+
+2. **Prepare Master Computer:**
+   - Attach a wireless modem.
+   - Run `programs/perlytiara/tClear/tClear_multi.lua`.
+   - Enter the IDs of the worker turtles and mining parameters as prompted.
+
+**Tips:**
+- Ensure all devices are within wireless modem range.
+- Use advanced computers/turtles for best compatibility.
+- For troubleshooting, check modem status with `peripheral.isPresent("left")` or `right`.
+
+See the [Google Doc](https://docs.google.com/document/d/1Ni4TG92eK2tLnDUl6Sh1mCXobvsoB0QAUr0Rn_HyVfk/edit?tab=t.0) for screenshots and advanced configuration.
+
+
+
 
 ## Docs
 See `docs/` for per-program usage notes.

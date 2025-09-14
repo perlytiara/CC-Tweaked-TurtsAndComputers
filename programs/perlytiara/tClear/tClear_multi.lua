@@ -31,6 +31,21 @@ local id1 = tonumber(read())
 print("Enter RIGHT-corner turtle ID:")
 local id2 = tonumber(read())
 
+-- Ask for chunky turtle IDs
+print("Enter LEFT chunky turtle ID (or press Enter to skip):")
+local chunkyInput1 = read()
+local chunkyId1 = nil
+if chunkyInput1 ~= "" then
+  chunkyId1 = tonumber(chunkyInput1)
+end
+
+print("Enter RIGHT chunky turtle ID (or press Enter to skip):")
+local chunkyInput2 = read()
+local chunkyId2 = nil
+if chunkyInput2 ~= "" then
+  chunkyId2 = tonumber(chunkyInput2)
+end
+
 print("Enter total depth (positive):")
 local depth = tonumber(read())
 print("Enter total width (positive):")
@@ -53,6 +68,24 @@ local masterId = os.getComputerID()
 local payload1 = { command = "RUN", program = "tClear", args = params1, masterId = masterId, role = "left" }
 local payload2 = { command = "RUN", program = "tClear", args = params2, masterId = masterId, role = "right" }
 
+-- Start chunky turtles first if available
+if chunkyId1 then
+  print("Starting left chunky turtle (ID " .. chunkyId1 .. ")...")
+  local chunkyPayload1 = { command = "RUN", program = "tClearChunky", masterId = os.getComputerID(), role = "left_chunky" }
+  rednet.send(chunkyId1, chunkyPayload1, "tclear-run")
+  rednet.send(chunkyId1, chunkyPayload1, "tclear-chunky")
+  sleep(1) -- Give chunky turtle time to start
+end
+
+if chunkyId2 then
+  print("Starting right chunky turtle (ID " .. chunkyId2 .. ")...")
+  local chunkyPayload2 = { command = "RUN", program = "tClearChunky", masterId = os.getComputerID(), role = "right_chunky" }
+  rednet.send(chunkyId2, chunkyPayload2, "tclear-run")
+  rednet.send(chunkyId2, chunkyPayload2, "tclear-chunky")
+  sleep(1) -- Give chunky turtle time to start
+end
+
+-- Start main mining turtles
 print("Sending to left turtle (ID " .. id1 .. "): " .. params1)
 rednet.send(id1, payload1, "tclear-run")
 rednet.send(id1, params1, "tclear-run") -- fallback for simple listeners
@@ -61,3 +94,6 @@ rednet.send(id2, payload2, "tclear-run")
 rednet.send(id2, params2, "tclear-run") -- fallback for simple listeners
 
 print("Turtles should start digging now.")
+if chunkyId1 or chunkyId2 then
+  print("Chunky turtles are paired and following to keep chunks loaded.")
+end
