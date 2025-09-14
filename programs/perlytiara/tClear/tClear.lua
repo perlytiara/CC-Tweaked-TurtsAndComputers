@@ -54,7 +54,7 @@ local blnStripMine   =false
 -- Chunky turtle variables
 local chunkyTurtleId = nil
 local blnUseChunky = false
-local chunkyPosition = {x = 1, y = 0, z = 0, facing = 0} -- relative position of chunky turtle 
+local chunkyPosition = {x = -1, y = 0, z = 0, facing = 0} -- relative position of chunky turtle (behind/left) 
 
 ---------------------------------------
 ---- Early UI functions ---------------
@@ -528,7 +528,8 @@ end
 -- Chunky turtle communication functions
 local function findChunkyTurtle()
 	-- Look for available chunky turtles
-	local timer = os.startTimer(2) -- Wait 2 seconds for responses
+	print("Broadcasting find_chunky message...")
+	local timer = os.startTimer(3) -- Wait 3 seconds for responses
 	local availableChunkies = {}
 	
 	-- Send broadcast to find chunky turtles
@@ -538,21 +539,31 @@ local function findChunkyTurtle()
 		timestamp = os.time()
 	}, "tclear-chunky")
 	
+	print("Waiting for chunky turtle responses...")
+	
 	-- Collect responses
 	local event, timerId
 	repeat
 		event, timerId = os.pullEvent()
 		if event == "rednet_message" then
 			local senderId, message, protocol = rednet.receive(0.1)
-			if senderId and protocol == "tclear-chunky" and message.type == "chunky_available" then
-				table.insert(availableChunkies, senderId)
-				print("Found chunky turtle: " .. senderId)
+			if senderId then
+				print("Received message from " .. senderId .. " on protocol '" .. (protocol or "none") .. "'")
+				if message and message.type == "chunky_available" then
+					table.insert(availableChunkies, senderId)
+					print("Found chunky turtle: " .. senderId)
+				else
+					print("Message type: " .. (message and message.type or "nil"))
+				end
 			end
 		end
 	until event == "timer" and timerId == timer
 	
+	print("Discovery timeout - found " .. #availableChunkies .. " chunky turtles")
+	
 	if #availableChunkies > 0 then
 		chunkyTurtleId = availableChunkies[1] -- Use first available
+		print("Attempting to pair with chunky turtle: " .. chunkyTurtleId)
 		-- Pair with the chunky turtle
 		rednet.send(chunkyTurtleId, {
 			type = "pair",
@@ -562,18 +573,27 @@ local function findChunkyTurtle()
 		print("Paired with chunky turtle: " .. chunkyTurtleId)
 		blnUseChunky = true
 		return true
+	else
+		print("No chunky turtles found - check that chunky turtle is running and has wireless modem")
 	end
 	return false
 end
 
-local function moveChunkyTurtle(targetX, targetY, targetZ, targetFacing)
+local function moveChunkyTurtle(mainX, mainY, mainZ, mainFacing)
 	if blnUseChunky and chunkyTurtleId then
+		-- Calculate chunky turtle position relative to main turtle (behind/to the left)
+		local chunkyX = mainX - 1  -- Behind the main turtle
+		local chunkyY = mainY      -- Same height
+		local chunkyZ = mainZ      -- Same lateral position
+		local chunkyFacing = mainFacing  -- Same facing direction
+		
 		rednet.send(chunkyTurtleId, {
 			type = "move",
-			target = {x = targetX, y = targetY, z = targetZ, facing = targetFacing},
+			target = {x = chunkyX, y = chunkyY, z = chunkyZ, facing = chunkyFacing},
 			timestamp = os.time()
 		}, "tclear-chunky")
-		chunkyPosition = {x = targetX, y = targetY, z = targetZ, facing = targetFacing}
+		chunkyPosition = {x = chunkyX, y = chunkyY, z = chunkyZ, facing = chunkyFacing}
+		print("Sent chunky turtle to position: (" .. chunkyX .. "," .. chunkyY .. "," .. chunkyZ .. ") facing=" .. chunkyFacing)
 	end
 end
 

@@ -22,7 +22,7 @@
 ---------------------------------------
 local cVersion  ="v1.0"             
 local cPrgName  ="tClearChunky"          
-local blnDebugPrint = false
+local blnDebugPrint = true
 
 ---------------------------------------
 ---- VARIABLES: specific -------------- 
@@ -70,21 +70,27 @@ end
 ---------------------------------------
 ---- Movement functions ---------------
 ---------------------------------------
-local function moveTo(x, y, z, facing)
-	-- Calculate relative movement needed
-	local dx = x - position.x
-	local dy = y - position.y
-	local dz = z - position.z
-	local dfacing = (facing - position.facing) % 4
+local function moveTo(targetX, targetY, targetZ, targetFacing)
+	-- Calculate relative movement needed from current position to target
+	local dx = targetX - position.x
+	local dy = targetY - position.y
+	local dz = targetZ - position.z
+	local dfacing = (targetFacing - position.facing) % 4
+	
+	debugPrint("Moving from (" .. position.x .. "," .. position.y .. "," .. position.z .. ") to (" .. targetX .. "," .. targetY .. "," .. targetZ .. ")")
+	debugPrint("Delta: dx=" .. dx .. " dy=" .. dy .. " dz=" .. dz .. " dfacing=" .. dfacing)
 	
 	-- Turn to correct facing first
 	if dfacing == 1 then
 		turtle.turnRight()
+		position.facing = (position.facing + 1) % 4
 	elseif dfacing == 2 then
 		turtle.turnRight()
 		turtle.turnRight()
+		position.facing = (position.facing + 2) % 4
 	elseif dfacing == 3 then
 		turtle.turnLeft()
+		position.facing = (position.facing - 1) % 4
 	end
 	
 	-- Move vertically first
@@ -92,7 +98,9 @@ local function moveTo(x, y, z, facing)
 		if turtle.up() then
 			dy = dy - 1
 			position.y = position.y + 1
+			debugPrint("Moved up to y=" .. position.y)
 		else
+			debugPrint("Cannot move up, blocked")
 			break
 		end
 	end
@@ -100,55 +108,106 @@ local function moveTo(x, y, z, facing)
 		if turtle.down() then
 			dy = dy + 1
 			position.y = position.y - 1
+			debugPrint("Moved down to y=" .. position.y)
 		else
+			debugPrint("Cannot move down, blocked")
 			break
 		end
 	end
 	
-	-- Move horizontally
+	-- Move horizontally - handle X movement (forward/backward relative to facing)
 	while dx > 0 do
-		if turtle.forward() then
+		-- Try to dig if blocked, but don't get stuck
+		if not turtle.forward() then
+			debugPrint("Blocked, trying to dig forward")
+			turtle.dig()
+			sleep(0.1) -- Brief pause after digging
+			if turtle.forward() then
+				dx = dx - 1
+				position.x = position.x + 1
+				debugPrint("Moved forward to x=" .. position.x)
+			else
+				debugPrint("Still blocked after digging, giving up")
+				break
+			end
+		else
 			dx = dx - 1
 			position.x = position.x + 1
-		else
-			break
+			debugPrint("Moved forward to x=" .. position.x)
 		end
 	end
 	while dx < 0 do
+		-- Turn around to move backward
 		turtle.turnLeft()
 		turtle.turnLeft()
-		if turtle.forward() then
+		if not turtle.forward() then
+			debugPrint("Blocked, trying to dig backward")
+			turtle.dig()
+			sleep(0.1)
+			if turtle.forward() then
+				dx = dx + 1
+				position.x = position.x - 1
+				debugPrint("Moved backward to x=" .. position.x)
+			else
+				debugPrint("Still blocked after digging backward, giving up")
+			end
+		else
 			dx = dx + 1
 			position.x = position.x - 1
-		else
-			break
+			debugPrint("Moved backward to x=" .. position.x)
 		end
 		turtle.turnLeft()
 		turtle.turnLeft()
+		if dx < 0 then break end -- If still can't move, give up
 	end
 	
+	-- Move sideways - handle Z movement (left/right relative to facing)
 	while dz > 0 do
 		turtle.turnRight()
-		if turtle.forward() then
+		if not turtle.forward() then
+			debugPrint("Blocked, trying to dig right")
+			turtle.dig()
+			sleep(0.1)
+			if turtle.forward() then
+				dz = dz - 1
+				position.z = position.z + 1
+				debugPrint("Moved right to z=" .. position.z)
+			else
+				debugPrint("Still blocked after digging right")
+			end
+		else
 			dz = dz - 1
 			position.z = position.z + 1
-		else
-			break
+			debugPrint("Moved right to z=" .. position.z)
 		end
 		turtle.turnLeft()
+		if dz > 0 then break end -- If still can't move, give up
 	end
 	while dz < 0 do
 		turtle.turnLeft()
-		if turtle.forward() then
+		if not turtle.forward() then
+			debugPrint("Blocked, trying to dig left")
+			turtle.dig()
+			sleep(0.1)
+			if turtle.forward() then
+				dz = dz + 1
+				position.z = position.z - 1
+				debugPrint("Moved left to z=" .. position.z)
+			else
+				debugPrint("Still blocked after digging left")
+			end
+		else
 			dz = dz + 1
 			position.z = position.z - 1
-		else
-			break
+			debugPrint("Moved left to z=" .. position.z)
 		end
 		turtle.turnRight()
+		if dz < 0 then break end -- If still can't move, give up
 	end
 	
-	position.facing = facing
+	-- Update final facing
+	position.facing = targetFacing
+	debugPrint("Final position: (" .. position.x .. "," .. position.y .. "," .. position.z .. ") facing=" .. position.facing)
 end
 
 ---------------------------------------
@@ -161,7 +220,19 @@ local function debugPrint(str)
 end
 
 local function processMessage(message)
-	if message.type == "pair" then
+	if message.type == "find_chunky" then
+		-- Master turtle is looking for chunky turtles
+		print("Master turtle " .. (message.masterId or "unknown") .. " is looking for chunky turtles")
+		-- Send response
+		rednet.send(message.masterId, {
+			type = "chunky_available",
+			id = os.getComputerID(),
+			timestamp = os.time()
+		}, "tclear-chunky")
+		print("Sent response to master turtle")
+		return true
+		
+	elseif message.type == "pair" then
 		masterTurtleId = message.masterId
 		isActive = true
 		debugPrint("Paired with master turtle " .. masterTurtleId)
@@ -210,16 +281,26 @@ rednet.broadcast({
 	timestamp = os.time()
 }, "tclear-chunky")
 
+print("Sent initial broadcast - waiting for master turtle...")
+
 -- Main loop
 local lastChunkLoad = 0
+local lastBroadcast = 0
+local broadcastInterval = 5 -- Send broadcast every 5 seconds
 
 while true do
 	local timer = os.startTimer(0.1) -- Check for messages every 0.1 seconds
 	
 	-- Handle rednet messages
 	local senderId, message, protocol = rednet.receive(0.1)
-	if senderId and (protocol == "tclear-chunky" or protocol == nil) then
-		processMessage(message)
+	if senderId then
+		-- Accept messages on multiple protocols
+		if protocol == "tclear-chunky" or protocol == "tclear-run" or protocol == "tclear" or protocol == nil then
+			local handled = processMessage(message)
+			if handled then
+				print("Processed message from " .. senderId)
+			end
+		end
 	end
 	
 	-- Send chunk loading signal periodically
@@ -227,6 +308,17 @@ while true do
 	if isActive and (currentTime - lastChunkLoad) >= chunkLoadingInterval then
 		sendChunkLoad()
 		lastChunkLoad = currentTime
+	end
+	
+	-- Send periodic broadcasts if not paired yet
+	if not isActive and (currentTime - lastBroadcast) >= broadcastInterval then
+		rednet.broadcast({
+			type = "chunky_available",
+			id = thisId,
+			timestamp = currentTime
+		}, "tclear-chunky")
+		print("Sent broadcast - still waiting for master turtle...")
+		lastBroadcast = currentTime
 	end
 	
 	-- Handle timer events (cleanup)
