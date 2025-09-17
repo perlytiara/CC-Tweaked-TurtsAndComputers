@@ -903,7 +903,7 @@ end
 cMinFuel=cMinFuel*(math.abs(digDeep)+1)*(math.abs(digWide)+1)+(digHeight*2)
 cMinFuel=math.floor(cMinFuel*1.1) + 20 -- extra
 
-refuelManager(cMinFuel,slotFuel,10) 
+refuelManager(cMinFuel,slotFuel,2) 
 print("... done")
 
 
