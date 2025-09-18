@@ -127,11 +127,7 @@ function deployMiningTurtle(startCoords, quarySize, endCoords, options, turtleId
 end
 
 function deployChunkyTurtle(startCoords, quarySize, endCoords, options, turtleId)
-    -- Move to place chunky turtle next to mining turtle
-    turtle.turnLeft()
-    turtle.forward()
-    turtle.turnRight()
-    
+    -- Place chunky turtle in front without moving the mineserver
     --Place chunky turtle from inventory (slot 2)
     local chunkySlot = nil
     for slot = 1, SLOT_COUNT, 1 do
@@ -175,11 +171,6 @@ function deployChunkyTurtle(startCoords, quarySize, endCoords, options, turtleId
         startCoords.x, startCoords.y, startCoords.z,
         turtleId
     ))
-    
-    -- Move back to original position
-    turtle.turnLeft()
-    turtle.back()
-    turtle.turnRight()
 end
 
 function deploy(startCoords, quarySize, endCoords, options, turtleId)

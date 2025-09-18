@@ -232,8 +232,13 @@ turnToFaceHeading(finalHeading, NORTH_HEADING)
 finalHeading = NORTH_HEADING
 --Now in Starting Position--
 
+-- Wait for chunky turtle to be ready
+print("Waiting for chunky turtle to be ready...")
+os.sleep(3)
+
 -- Notify chunky turtle we're starting mining
 notifyChunkyTurtle("MINING_START", turtleId)
+print("Starting mining operation...")
 
 --------------------------------START MINING CODE-----------------------------------------
 

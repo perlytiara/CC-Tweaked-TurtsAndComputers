@@ -214,7 +214,10 @@ local heading = moveTo(startCoords, getOrientation())
 local NORTH_HEADING = 2
 turnToFaceHeading(heading, NORTH_HEADING)
 
-print(string.format("Chunky turtle %d ready - paired with mining turtle %d", turtleId, turtleId))
+print(string.format("Chunky turtle %d ready - waiting for mining turtle %d to start", turtleId, turtleId))
+
+-- Wait a bit for mining turtle to get ready
+os.sleep(2)
 
 -- Start following the mining turtle
 followMiningTurtle(turtleId)
