@@ -8,6 +8,14 @@ local SERVER_PORT = 420
 local modem = peripheral.wrap("right")
 modem.open(CLIENT_PORT)
 
+-- Communication with chunky turtle
+local CHUNKY_PORT = 421
+modem.open(CHUNKY_PORT)
+
+function notifyChunkyTurtle(message, turtleId)
+    modem.transmit(CHUNKY_PORT, CLIENT_PORT, string.format("%d:%s", turtleId, message))
+end
+
 function split (inputstr, sep)
     if sep == nil then
             sep = "%s"
@@ -26,6 +34,8 @@ function parseParams(data)
     coords[1] = vector.new(params[1], params[2], params[3])
     coords[2] = vector.new(params[4], params[5], params[6])
     coords[3] = vector.new(params[7], params[8], params[9])
+    coords[4] = params[10] -- storage bit
+    coords[5] = params[11] -- turtle ID
 
     return (coords)
 end
@@ -198,6 +208,9 @@ modem.transmit(SERVER_PORT, CLIENT_PORT, "CLIENT_DEPLOYED")
 event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
 data = parseParams(msg)
 
+-- Extract turtle ID for communication with chunky turtle
+local turtleId = tonumber(data[5]) or 1
+
 -- Pick up coal and refuel
 local fuelNeeded = calculateFuel(data[1], data[2], "minecraft:coal")
 turtle.suckDown(fuelNeeded)
@@ -218,6 +231,9 @@ local NORTH_HEADING = 2
 turnToFaceHeading(finalHeading, NORTH_HEADING)
 finalHeading = NORTH_HEADING
 --Now in Starting Position--
+
+-- Notify chunky turtle we're starting mining
+notifyChunkyTurtle("MINING_START", turtleId)
 
 --------------------------------START MINING CODE-----------------------------------------
 
@@ -407,6 +423,9 @@ finishedHeading = startQuary(quary.x, quary.y, quary.z, finalHeading)
 
 -- Pick up the ender chest before returning
 pickupEnderChest()
+
+-- Notify chunky turtle we're done mining
+notifyChunkyTurtle("MINING_COMPLETE", turtleId)
 
 --------------------------------START RETURN TRIP CODE------------------------------------
 
