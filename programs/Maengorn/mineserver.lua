@@ -95,10 +95,8 @@ function deploy(startCoords, quarySize, endCoords, options)
     -- Wait a moment for turtle to boot up
     os.sleep(1)
     
-    -- Copy startup program to the deployed turtle
-    print("Setting up startup program on deployed turtle...")
-    peripheral.call("front", "copy", "disk/startup", "/startup")
-    peripheral.call("front", "copy", "disk/clientdig", "/clientdig")
+    -- The deployed turtle will handle copying files from its own disk via startup.lua
+    print("Turtle deployed - it will automatically run startup program")
     
     -- Wait for client to send ping
     event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
