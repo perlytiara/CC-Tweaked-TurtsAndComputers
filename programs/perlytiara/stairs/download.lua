@@ -2,10 +2,10 @@
 print("Installing stairs system...")
 
 local files = {
-  stairs = "https://raw.githubusercontent.com/your-repo/stairs.lua",  -- Replace with actual URL
-  client = "https://raw.githubusercontent.com/your-repo/client.lua",
-  multi = "https://raw.githubusercontent.com/your-repo/multi.lua",
-  startup = "https://raw.githubusercontent.com/your-repo/startup.lua"
+  stairs = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAndComputers/refs/heads/main/programs/perlytiara/stairs/stairs.lua",
+  client = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAndComputers/refs/heads/main/programs/perlytiara/stairs/client.lua",
+  multi = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAndComputers/refs/heads/main/programs/perlytiara/stairs/multi.lua",
+  startup = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAndComputers/refs/heads/main/programs/perlytiara/stairs/startup.lua"
 }
 
 -- For now, just copy from local files since we don't have URLs
