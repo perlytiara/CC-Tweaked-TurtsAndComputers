@@ -81,29 +81,26 @@ function deployFuelChest()
 end
 
 
-function deployMiningTurtle(startCoords, quarySize, endCoords, options, turtleId)
-    --Place mining turtle from inventory (slot 1)
+function deploy(startCoords, quarySize, endCoords, options)
+    --Place turtle from inventory
     turtle.select(getItemIndex("computercraft:turtle_advanced"))
     while(turtle.detect()) do
         os.sleep(0.3)
     end
 
-    --Place and turn on mining turtle
+    --Place and turn on turtle
     turtle.place()
     peripheral.call("front", "turnOn")
     
-    -- Wait a moment for turtle to boot up
-    os.sleep(1)
     
-    print(string.format("Mining turtle %d deployed - running startup program", turtleId))
-    
-    -- Wait for mining client to send ping
+    --Wait for client to send ping
     event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
     if(msg ~= "CLIENT_DEPLOYED") then
-        print("No mining client deploy message, exitting...")
+        print("No client deploy message, exitting...")
         os.exit()
     end
 
+    
     if(options["withStorage"]) then
         --Set up ender chest
         if (not checkFuel()) then
@@ -115,70 +112,15 @@ function deployMiningTurtle(startCoords, quarySize, endCoords, options, turtleId
     deployFuelChest()
     local storageBit = options["withStorage"] and 1 or 0
 
-    -- Send mining coordinates to mining turtle
+    -- Client is deployed
     modem.transmit(CLIENT_PORT,
         SERVER_PORT,
-        string.format("%d %d %d %d %d %d %d %d %d %d %d", 
+        string.format("%d %d %d %d %d %d %d %d %d %d", 
         startCoords.x, startCoords.y, startCoords.z,
         quarySize.x, quarySize.y, quarySize.z,
         endCoords.x, endCoords.y, endCoords.z,
-        storageBit, turtleId
+        storageBit
     ))
-end
-
-function deployChunkyTurtle(startCoords, quarySize, endCoords, options, turtleId)
-    -- Place chunky turtle in front without moving the mineserver
-    --Place chunky turtle from inventory (slot 2)
-    local chunkySlot = nil
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil and item["name"] == "computercraft:turtle_advanced" and slot ~= getItemIndex("computercraft:turtle_advanced")) then
-            chunkySlot = slot
-            break
-        end
-    end
-    
-    if chunkySlot == nil then
-        print("ERROR: No chunky turtle found in slot 2!")
-        return
-    end
-    
-    turtle.select(chunkySlot)
-    while(turtle.detect()) do
-        os.sleep(0.3)
-    end
-
-    --Place and turn on chunky turtle
-    turtle.place()
-    peripheral.call("front", "turnOn")
-    
-    -- Wait a moment for turtle to boot up
-    os.sleep(1)
-    
-    print(string.format("Chunky turtle %d deployed - it will automatically run chunkystartup program", turtleId))
-    
-    -- Wait for chunky client to send ping
-    event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
-    if(msg ~= "CHUNKY_DEPLOYED") then
-        print("No chunky client deploy message, exitting...")
-        os.exit()
-    end
-
-    -- Send pairing info to chunky turtle (same turtle ID)
-    modem.transmit(CLIENT_PORT + 1,
-        SERVER_PORT,
-        string.format("%d %d %d %d", 
-        startCoords.x, startCoords.y, startCoords.z,
-        turtleId
-    ))
-end
-
-function deploy(startCoords, quarySize, endCoords, options, turtleId)
-    -- Deploy mining turtle first
-    deployMiningTurtle(startCoords, quarySize, endCoords, options, turtleId)
-    
-    -- Deploy chunky turtle second
-    deployChunkyTurtle(startCoords, quarySize, endCoords, options, turtleId)
 end
 
 
@@ -226,7 +168,7 @@ while (true) do
     withStorage = withStorage == "1" and true or false
     data = parseParams(msg)
     options = {}
-    options["withStorage"] = true
+    options["withStorage"] = True
 
     target = data[1]
     size = data[2]
@@ -237,41 +179,32 @@ while (true) do
 
     tab, xDf, zDf = table.unpack(getPositioningTable(size.x, size.z, segmentation))
 
-    print(string.format("Deploying %d pairs of bots...", #tab))
+    print(string.format("Deploying %d bots...", #tab))
     for i = 1, #tab, 1 do
         xOffset, zOffset, width, height = table.unpack(tab[i])
         local offsetTarget = vector.new(target.x + xOffset, target.y, target.z + zOffset)
         local sclaedSize = vector.new(width, size.y, height)
 
-        deploy(offsetTarget, sclaedSize, finish, options, i)
+        deploy(offsetTarget, sclaedSize, finish, options)
         os.sleep(1)
-        print(string.format( "Deployed pair %d to;  %d %d %d    %d %d",  i, target.x + xOffset, target.y, target.z + zOffset, sclaedSize.x, sclaedSize.z))
+        print(string.format( "Deploying to;  %d %d %d    %d %d",  target.x + xOffset, target.y, target.z + zOffset, sclaedSize.x, sclaedSize.z))
     end
 
     -- All bots deployed, wait for last bot finished signal
     event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
     turtle.digUp()
 	turtle.turnRight()
-	turtle.forward()
+	turtle.forward(1)
 	turtle.turnLeft()
-	
-	-- Check if we have ender chests to deposit
-	local enderSlot = getItemIndex("enderstorage:ender_storage")
-	if enderSlot ~= nil then
-		turtle.select(enderSlot)
-		endercount = (turtle.getItemCount() - 2)
-		if (endercount > 0) then
-			print(string.format("Depositing %d Ender Chests.", endercount))
-			turtle.drop(endercount)
-		else
-			print("No extra ender chests to deposit")
-		end
-	else
-		print("No ender chests found in inventory")
+	turtle.select(getItemIndex("enderstorage:ender_storage"))
+	endercount = (turtle.getItemCount() - 2)
+	if (endercount ~= 0) then
+		print(string.format("Depositing %d Ender Chests.", endercount))
+		turtle.drop(endercount)
 	end
 	
 	turtle.turnLeft()
-	turtle.forward()
+	turtle.forward(1)
 	turtle.turnRight()
 	
 

@@ -1,33 +1,1221 @@
 output_dir = ...
-local function find_disk_mount()
-    for i = 1, 16 do
-        local name = (i == 1) and 'disk' or ('disk' .. i)
-        if fs.isDir(name) then return name end
-    end
-    for _, n in ipairs(fs.list("/")) do
-        if string.match(n, "^disk%d*$") and fs.isDir(n) then return n end
-    end
-    return nil
-end
-local function ensure_dir(p)
-    if not fs.isDir(p) then fs.makeDir(p) end
-end
-if not output_dir or output_dir == "" then
-    output_dir = find_disk_mount() or "disk"
+if not output_dir then
+    output_dir = ''
 end
 path = shell.resolve(output_dir)
 if not fs.isDir(path) then
-    local alt = find_disk_mount()
-    if alt and fs.isDir(alt) then
-        path = shell.resolve(alt)
-    else
-        path = shell.resolve("files")
-        ensure_dir(path)
-        print("No disk mount found; writing files to ./files")
-    end
+    error(path .. ' is not a directory')
 end
 
 files = {
+    ["LICENSE"] = [===[MIT License
+
+Copyright (c) 2020 MerlinLikeTheWizard
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.]===],
+    ["README.md"] = [===[# Mastermine
+A fully automated strip mining network for ComputerCraft turtles!
+
+Here's all the code for anyone who is interested! Check out the tutorial below for installation instructions.
+
+Also, here are steps for a quick install via pastebin:
+
+1. Place your advanced computer next to a disk drive with a blank disk in.
+2. Run `pastebin get CtcSGkpc mastermine.lua`
+3. Run `mastermine disk`
+4. Run `disk/hub.lua`
+
+## Play with or without PeripheralsPlusOne
+
+I highly recommend using the PeripheralsPlusOne and its chunky turtles, but upon popular request I added the ability to disable the need for chunky turtle pairs. Just go to the config and set `use_chunky_turtles = false`
+
+## Video description:
+
+[![https://www.youtube.com/watch?v=2I2VXl9Pg6Q](https://img.youtube.com/vi/2I2VXl9Pg6Q/0.jpg)](https://www.youtube.com/watch?v=2I2VXl9Pg6Q)
+
+## Video tutorial:
+
+[![https://www.youtube.com/watch?v=2DTP1LXuiCg](https://img.youtube.com/vi/2DTP1LXuiCg/0.jpg)](https://www.youtube.com/watch?v=2DTP1LXuiCg)
+
+## User commands:
+
+* `on/go`
+* `off/stop`
+* `turtle <#> <action>`
+* `update <#>`
+* `reboot <#>`
+* `shutdown <#>`
+* `reset <#>`
+* `clear <#>`
+* `halt <#>`
+* `return <#>`
+* `hubupdate`
+* `hubreboot`
+* `hubshutdown`
+
+
+use `*` as notation for all turtles
+
+
+## Required mods:
+
+https://www.curseforge.com/minecraft/mc-mods/cc-tweaked
+
+https://github.com/rolandoislas/PeripheralsPlusOne
+
+Required by PeripheralsPlusOne: https://www.curseforge.com/minecraft/mc-mods/the-framework]===],
+    ["hub.lua"] = [===[if fs.exists('/disk/hub_files/session_id') then
+    fs.delete('/disk/hub_files/session_id')
+end
+if fs.exists('/session_id') then
+    fs.copy('/session_id', '/disk/hub_files/session_id')
+end
+if fs.exists('/disk/hub_files/mine') then
+    fs.delete('/disk/hub_files/mine')
+end
+if fs.exists('/mine') then
+    fs.copy('/mine', '/disk/hub_files/mine')
+end
+
+for _, filename in pairs(fs.list('/')) do
+    if filename ~= 'rom' and filename ~= 'disk' and filename ~= 'openp' and filename ~= 'ppp' and filename ~= 'persistent' then
+        fs.delete(filename)
+    end
+end
+for _, filename in pairs(fs.list('/disk/hub_files')) do
+    fs.copy('/disk/hub_files/' .. filename, '/' .. filename)
+end
+os.reboot()]===],
+    ["pocket.lua"] = [===[local src, dest = ...
+
+fs.copy(fs.combine(src, 'pocket_files/update'), fs.combine(dest, 'update'))
+file = fs.open(fs.combine(dest, 'hub_id'), 'w')
+file.write(os.getComputerID())
+file.close()]===],
+    ["turtle.lua"] = [===[for _, filename in pairs(fs.list('/')) do
+    if filename ~= 'rom' and filename ~= 'disk' and filename ~= 'openp' and filename ~= 'ppp' and filename ~= 'persistent' then
+        fs.delete(filename)
+    end
+end
+
+for _, filename in pairs(fs.list('/disk/turtle_files')) do
+    fs.copy('/disk/turtle_files/' .. filename, '/' .. filename)
+end
+
+print("Enter ID of Hub computer to link to: ")
+hub_id = tonumber(read())
+if hub_id == nil then
+    error("Invalid ID")
+end
+
+file = fs.open('/hub_id', 'w')
+file.write(hub_id)
+file.close()
+
+print("Linked")
+
+sleep(1)
+os.reboot()]===],
+    ["turtle_files/actions.lua"] = [===[inf = basics.inf
+str_xyz = basics.str_xyz
+
+--lua_print = print
+--log_file = fs.open('log.txt', 'w')
+--function print(thing)
+--    lua_print(thing)
+--    log_file.writeLine(thing)
+--end
+    
+
+bumps = {
+    north = { 0,  0, -1},
+    south = { 0,  0,  1},
+    east  = { 1,  0,  0},
+    west  = {-1,  0,  0},
+}
+
+
+left_shift = {
+    north = 'west',
+    south = 'east',
+    east  = 'north',
+    west  = 'south',
+}
+
+
+right_shift = {
+    north = 'east',
+    south = 'west',
+    east  = 'south',
+    west  = 'north',
+}
+
+
+reverse_shift = {
+    north = 'south',
+    south = 'north',
+    east  = 'west',
+    west  = 'east',
+}
+
+
+move = {
+    forward = turtle.forward,
+    up      = turtle.up,
+    down    = turtle.down,
+    back    = turtle.back,
+    left    = turtle.turnLeft,
+    right   = turtle.turnRight
+}
+
+
+detect = {
+    forward = turtle.detect,
+    up      = turtle.detectUp,
+    down    = turtle.detectDown
+}
+
+
+inspect = {
+    forward = turtle.inspect,
+    up      = turtle.inspectUp,
+    down    = turtle.inspectDown
+}
+
+
+dig = {
+    forward = turtle.dig,
+    up      = turtle.digUp,
+    down    = turtle.digDown
+}
+
+attack = {
+    forward = turtle.attack,
+    up      = turtle.attackUp,
+    down    = turtle.attackDown
+}
+
+
+getblock = {
+    
+    up = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        return {x = pos.x, y = pos.y + 1, z = pos.z}
+    end,
+
+    down = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        return {x = pos.x, y = pos.y - 1, z = pos.z}
+    end,
+
+    forward = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        local bump = bumps[fac]
+        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
+    end,
+    
+    back = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        local bump = bumps[fac]
+        return {x = pos.x - bump[1], y = pos.y - bump[2], z = pos.z - bump[3]}
+    end,
+    
+    left = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        local bump = bumps[left_shift[fac]]
+        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
+    end,
+    
+    right = function(pos, fac)
+        if not pos then pos = state.location end
+        if not fac then fac = state.orientation end
+        local bump = bumps[right_shift[fac]]
+        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
+    end,
+}
+
+
+function digblock(direction)
+    dig[direction]()
+    return true
+end
+
+
+function delay(duration)
+    sleep(duration)
+    return true
+end
+
+
+function up()
+    return go('up')
+end
+
+
+function forward()
+    return go('forward')
+end
+
+
+function down()
+    return go('down')
+end
+
+
+function back()
+    return go('back')
+end
+
+
+function left()
+    return go('left')
+end
+
+
+function right()
+    return go('right')
+end
+
+
+function follow_route(route)
+    for step in route:gmatch'.' do
+        if step == 'u' then
+            if not go('up')      then return false end
+        elseif step == 'f' then
+            if not go('forward') then return false end
+        elseif step == 'd' then
+            if not go('down')    then return false end
+        elseif step == 'b' then
+            if not go('back')    then return false end
+        elseif step == 'l' then
+            if not go('left')    then return false end
+        elseif step == 'r' then
+            if not go('right')   then return false end
+        end
+    end
+    return true
+end
+                    
+                    
+function face(orientation)
+    if state.orientation == orientation then
+        return true
+    elseif right_shift[state.orientation] == orientation then
+        if not go('right') then return false end
+    elseif left_shift[state.orientation] == orientation then
+        if not go('left') then return false end
+    elseif right_shift[right_shift[state.orientation]] == orientation then
+        if not go('right') then return false end
+        if not go('right') then return false end
+    else
+        return false
+    end
+    return true
+end
+
+
+function log_movement(direction)
+    if direction == 'up' then
+        state.location.y = state.location.y +1
+    elseif direction == 'down' then
+        state.location.y = state.location.y -1
+    elseif direction == 'forward' then
+        bump = bumps[state.orientation]
+        state.location = {x = state.location.x + bump[1], y = state.location.y + bump[2], z = state.location.z + bump[3]}
+    elseif direction == 'back' then
+        bump = bumps[state.orientation]
+        state.location = {x = state.location.x - bump[1], y = state.location.y - bump[2], z = state.location.z - bump[3]}
+    elseif direction == 'left' then
+        state.orientation = left_shift[state.orientation]
+    elseif direction == 'right' then
+        state.orientation = right_shift[state.orientation]
+    end
+    return true
+end
+
+
+function go(direction, nodig)
+    if not nodig then
+        if detect[direction] then
+            if detect[direction]() then
+                safedig(direction)
+            end
+        end
+    end
+    if not move[direction] then
+        return false
+    end
+    if not move[direction]() then
+        if attack[direction] then
+            attack[direction]()
+        end
+        return false
+    end
+    log_movement(direction)
+    return true
+end
+
+
+function go_to_axis(axis, coordinate, nodig)
+    local delta = coordinate - state.location[axis]
+    if delta == 0 then
+        return true
+    end
+    
+    if axis == 'x' then
+        if delta > 0 then
+            if not face('east') then return false end
+        else
+            if not face('west') then return false end
+        end
+    elseif axis == 'z' then
+        if delta > 0 then
+            if not face('south') then return false end
+        else
+            if not face('north') then return false end
+        end
+    end
+    
+    for i = 1, math.abs(delta) do
+        if axis == 'y' then
+            if delta > 0 then
+                if not go('up', nodig) then return false end
+            else
+                if not go('down', nodig) then return false end
+            end
+        else
+            if not go('forward', nodig) then return false end
+        end
+    end
+    return true
+end
+
+
+function go_to(end_location, end_orientation, path, nodig)
+    if path then
+        for axis in path:gmatch'.' do
+            if not go_to_axis(axis, end_location[axis], nodig) then return false end
+        end
+    elseif end_location.path then
+        for axis in end_location.path:gmatch'.' do
+            if not go_to_axis(axis, end_location[axis], nodig) then return false end
+        end
+    else
+        return false
+    end
+    if end_orientation then
+        if not face(end_orientation) then return false end
+    elseif end_location.orientation then
+        if not face(end_location.orientation) then return false end
+    end
+    return true
+end
+
+
+function go_route(route, xyzo)
+    local xyz_string
+    if xyzo then
+        xyz_string = str_xyz(xyzo)
+    end
+    local location_str = basics.str_xyz(state.location)
+    while route[location_str] and location_str ~= xyz_string do
+        if not go_to(route[location_str], nil, 'xyz') then return false end
+        location_str = basics.str_xyz(state.location)
+    end
+    if xyzo then
+        if location_str ~= xyz_string then
+            return false
+        end
+        if xyzo.orientation then
+            if not face(xyzo.orientation) then return false end
+        end
+    end
+    return true
+end
+
+
+function go_to_home()
+    state.updated_not_home = nil
+    if basics.in_area(state.location, config.locations.home_area) then
+        return true
+    elseif basics.in_area(state.location, config.locations.greater_home_area) then
+        if not go_to_home_exit() then return false end
+    elseif basics.in_area(state.location, config.locations.waiting_room_area) then
+        if not go_to(config.locations.mine_exit, nil, config.paths.waiting_room_to_mine_exit, true) then return false end
+    elseif state.location.y < config.locations.mine_enter.y then
+        return false
+    end
+    if config.locations.main_loop_route[basics.str_xyz(state.location)] then
+        if not go_route(config.locations.main_loop_route, config.locations.home_enter) then return false end
+    elseif basics.in_area(state.location, config.locations.control_room_area) then
+        if not go_to(config.locations.home_enter, nil, config.paths.control_room_to_home_enter, true) then return false end
+    else
+        return false
+    end
+    if not forward() then return false end
+    while detect.down() do
+        if not forward() then return false end
+    end
+    if not down() then return false end
+    if not right() then return false end
+    if not right() then return false end
+    return true
+end
+
+
+function go_to_home_exit()
+    if basics.in_area(state.location, config.locations.greater_home_area) then
+        if not go_to(config.locations.home_exit, nil, config.paths.home_to_home_exit) then return false end
+    elseif config.locations.main_loop_route[basics.str_xyz(state.location)] then
+        if not go_route(config.locations.main_loop_route, config.locations.home_exit) then return false end
+    else
+        return false
+    end
+    return true
+end
+
+
+function go_to_item_drop()
+    if not config.locations.main_loop_route[basics.str_xyz(state.location)] then
+        if not go_to_home() then return false end
+        if not go_to_home_exit() then return false end
+    end
+    if not go_route(config.locations.main_loop_route, config.locations.item_drop) then return false end
+    return true
+end
+
+
+function go_to_refuel()
+    if not config.locations.main_loop_route[basics.str_xyz(state.location)] then
+        if not go_to_home() then return false end
+        if not go_to_home_exit() then return false end
+    end
+    if not go_route(config.locations.main_loop_route, config.locations.refuel) then return false end
+    return true
+end
+
+
+function go_to_waiting_room()
+    if not basics.in_area(state.location, config.locations.waiting_room_line_area) then
+        if not go_to_home() then return false end
+    end
+    if not go_to(config.locations.waiting_room, nil, config.paths.home_to_waiting_room) then return false end
+    return true
+end
+
+
+function go_to_mine_enter()
+    if not go_route(config.locations.waiting_room_to_mine_enter_route) then return false end
+    return true
+end
+
+
+function go_to_strip(strip)
+    if state.location.y < config.locations.mine_enter.y or basics.in_location(state.location, config.locations.mine_enter) then
+        if state.type == 'mining' then
+            local bump = bumps[strip.orientation]
+            strip = {
+                x = strip.x + bump[1],
+                y = strip.y + bump[2],
+                z = strip.z + bump[3],
+                orientation = strip.orientation
+            }
+        end
+        if not go_to(strip, nil, config.paths.mine_enter_to_strip) then return false end
+        return true
+    end
+end
+
+
+function go_to_mine_exit(strip)
+    if state.location.y < config.locations.mine_enter.y or (state.location.x == config.locations.mine_exit.x and state.location.z == config.locations.mine_exit.z) then
+        if state.location.x == config.locations.mine_enter.x and state.location.z == config.locations.mine_enter.z then
+            -- If directly under mine_enter, shift over to exit
+            if not go_to_axis('z', config.locations.mine_exit.z) then return false end
+        elseif state.location.x ~= config.locations.mine_exit.x or state.location.z ~= config.locations.mine_exit.z then
+            -- If NOT directly under mine_exit go to proper y
+            if not go_to_axis('y', strip.y + 1) then return false end
+            if state.location.z ~= config.locations.mine_enter.z and strip.z ~= config.locations.mine_enter.z then
+                -- If not in main_shaft, find your strip
+                if not go_to_axis('x', strip.x) then return false end
+            end
+            if state.location.x ~= config.locations.mine_exit.x then
+                -- If not in strip x = origin, go to main_shaft
+                if not go_to_axis('z', config.locations.mine_enter.z) then return false end
+            end
+        end
+        if not go_to(config.locations.mine_exit, nil, 'xzy') then return false end
+        return true
+    end
+end
+
+
+function safedig(direction)
+    -- DIG IF BLOCK NOT ON BLACKLIST
+    if not direction then
+        direction = 'forward'
+    end
+    
+    local block_name = ({inspect[direction]()})[2].name
+    if block_name then
+        for _, word in pairs(config.dig_disallow) do
+            if string.find(string.lower(block_name), word) then
+                return false
+            end
+        end
+
+        return dig[direction]()
+    end
+    return true
+end
+
+
+function dump_items(omit)
+    for slot = 1, 16 do
+        if turtle.getItemCount(slot) > 0 and ((not omit) or (not omit[turtle.getItemDetail(slot).name])) then
+            turtle.select(slot)
+            if not turtle.drop() then return false end
+        end
+    end
+    return true
+end
+    
+
+
+function prepare(min_fuel_amount)
+    if state.item_count > 0 then
+        if not go_to_item_drop() then return false end
+        if not dump_items(config.fuelnames) then return false end
+    end
+    local min_fuel_amount = min_fuel_amount + config.fuel_padding
+    if not go_to_refuel() then return false end
+    if not dump_items() then return false end
+    turtle.select(1)
+    if turtle.getFuelLevel() ~= 'unlimited' then
+        while turtle.getFuelLevel() < min_fuel_amount do
+            if not turtle.suck(math.min(64, math.ceil(min_fuel_amount / config.fuel_per_unit))) then return false end
+            turtle.refuel()
+        end
+    end
+    return true
+end
+
+
+function calibrate()
+    -- GEOPOSITION BY MOVING TO ADJACENT BLOCK AND BACK
+    local sx, sy, sz = gps.locate()
+--    if sx == config.interface.x and sy == config.interface.y and sz == config.interface.z then
+--        refuel()
+--    end
+    if not sx or not sy or not sz then
+        return false
+    end
+    for i = 1, 4 do
+        -- TRY TO FIND EMPTY ADJACENT BLOCK
+        if not turtle.detect() then
+            break
+        end
+        if not turtle.turnRight() then return false end
+    end
+    if turtle.detect() then
+        -- TRY TO DIG ADJACENT BLOCK
+        for i = 1, 4 do
+            safedig('forward')
+            if not turtle.detect() then
+                break
+            end
+            if not turtle.turnRight() then return false end
+        end
+        if turtle.detect() then
+            return false
+        end
+    end
+    if not turtle.forward() then return false end
+    local nx, ny, nz = gps.locate()
+    if nx == sx + 1 then
+        state.orientation = 'east'
+    elseif nx == sx - 1 then
+        state.orientation = 'west'
+    elseif nz == sz + 1 then
+        state.orientation = 'south'
+    elseif nz == sz - 1 then
+        state.orientation = 'north'
+    else
+        return false
+    end
+    state.location = {x = nx, y = ny, z = nz}
+    print('Calibrated to ' .. str_xyz(state.location, state.orientation))
+    
+    back()
+    
+    if basics.in_area(state.location, config.locations.home_area) then
+        face(left_shift[left_shift[config.locations.homes.increment]])
+    end
+    
+    return true
+end
+
+
+function initialize(session_id, config_values)
+    -- INITIALIZE TURTLE
+    
+    state.session_id = session_id
+    
+    -- COPY CONFIG DATA INTO MEMORY
+    for k, v in pairs(config_values) do
+        config[k] = v
+    end
+    
+    -- DETERMINE TURTLE TYPE
+    state.peripheral_left = peripheral.getType('left')
+    state.peripheral_right = peripheral.getType('right')
+    if state.peripheral_left == 'chunkLoader' or state.peripheral_right == 'chunkLoader' or state.peripheral_left == 'chunky' or state.peripheral_right == 'chunky' then
+        state.type = 'chunky'
+        for k, v in pairs(config.chunky_turtle_locations) do
+            config.locations[k] = v
+        end
+    else
+        state.type = 'mining'
+        for k, v in pairs(config.mining_turtle_locations) do
+            config.locations[k] = v
+        end
+        if state.peripheral_left == 'modem' then
+            state.peripheral_right = 'pick'
+        else
+            state.peripheral_left = 'pick'
+        end
+    end
+    
+    state.request_id = 1
+    state.initialized = true
+    return true
+end
+
+
+function getcwd()
+    local running_program = shell.getRunningProgram()
+    local program_name = fs.getName(running_program)
+    return "/" .. running_program:sub(1, #running_program - #program_name)
+end
+
+
+function pass()
+    return true
+end
+
+
+function dump(direction)
+    if not face(direction) then return false end
+    if ({inspect.forward()})[2].name ~= 'computercraft:turtle_advanced' then
+        return false
+    end
+    for slot = 1, 16 do
+        if turtle.getItemCount(slot) > 0 then
+            turtle.select(slot)
+            turtle.drop()
+        end
+    end
+    return true
+end
+
+
+function checkTags(data)
+    if type(data.tags) ~= 'table' then
+        return false
+    end
+    if not config.blocktags then
+        return false
+    end
+    for k,v in pairs(data.tags) do
+        if config.blocktags[k] then
+            return true
+        end
+    end
+    return false
+end
+
+
+function detect_ore(direction)
+    local block = ({inspect[direction]()})[2]
+    if config.orenames[block.name] then
+        return true
+    elseif checkTags(block) then
+        return true
+    end
+    return false
+end
+
+
+function scan(valid, ores)
+    local checked_left  = false
+    local checked_right = false
+    
+    local f = str_xyz(getblock.forward())
+    local u = str_xyz(getblock.up())
+    local d = str_xyz(getblock.down())
+    local l = str_xyz(getblock.left())
+    local r = str_xyz(getblock.right())
+    local b = str_xyz(getblock.back())
+    
+    if not valid[f] and valid[f] ~= false then
+        valid[f] = detect_ore('forward')
+        ores[f] = valid[f]
+    end
+    if not valid[u] and valid[u] ~= false then
+        valid[u] = detect_ore('up')
+        ores[u] = valid[u]
+    end
+    if not valid[d] and valid[d] ~= false then
+        valid[d] = detect_ore('down')
+        ores[d] = valid[d]
+    end
+    if not valid[l] and valid[l] ~= false then
+        left()
+        checked_left = true
+        valid[l] = detect_ore('forward')
+        ores[l] = valid[l]
+    end
+    if not valid[r] and valid[r] ~= false then
+        right()
+        if checked_left then
+            right()
+        end
+        checked_right = true
+        valid[r] = detect_ore('forward')
+        ores[r] = valid[r]
+    end
+    if not valid[b] and valid[b] ~= false then
+        if checked_right then
+            right()
+        elseif checked_left then
+            left()
+        else
+            right(2)
+        end
+        valid[b] = detect_ore('forward')
+        ores[b] = valid[b]
+    end
+end
+
+
+function fastest_route(area, pos, fac, end_locations)
+    local queue = {}
+    local explored = {}
+    table.insert(queue,
+        {
+            coords = {x = pos.x, y = pos.y, z = pos.z},
+            facing = fac,
+            path = '',
+        }
+    )
+    explored[str_xyz(pos, fac)] = true
+
+    while #queue > 0 do
+        local node = table.remove(queue, 1)
+        if end_locations[str_xyz(node.coords)] or end_locations[str_xyz(node.coords, node.facing)] then
+            return node.path
+        end
+        for _, step in pairs({
+                {coords = node.coords,                                facing = left_shift[node.facing],  path = node.path .. 'l'},
+                {coords = node.coords,                                facing = right_shift[node.facing], path = node.path .. 'r'},
+                {coords = getblock.forward(node.coords, node.facing), facing = node.facing,              path = node.path .. 'f'},
+                {coords = getblock.up(node.coords, node.facing),      facing = node.facing,              path = node.path .. 'u'},
+                {coords = getblock.down(node.coords, node.facing),    facing = node.facing,              path = node.path .. 'd'},
+                }) do
+            explore_string = str_xyz(step.coords, step.facing)
+            if not explored[explore_string] and (not area or area[str_xyz(step.coords)]) then
+                explored[explore_string] = true
+                table.insert(queue, step)
+            end
+        end
+    end
+end
+
+
+function mine_vein(direction)
+    if not face(direction) then return false end
+    
+    -- Log starting location
+    local start = str_xyz({x = state.location.x, y = state.location.y, z = state.location.z}, state.orientation)
+
+    -- Begin block map
+    local valid = {}
+    local ores = {}
+    valid[str_xyz(state.location)] = true
+    valid[str_xyz(getblock.back(state.location, state.orientation))] = false
+    for i = 1, config.vein_max do
+
+        -- Scan adjacent
+        scan(valid, ores)
+
+        -- Search for nearest ore
+        local route = fastest_route(valid, state.location, state.orientation, ores)
+
+        -- Check if there is one
+        if not route then
+            break
+        end
+
+        -- Retrieve ore
+        turtle.select(1)
+        if not follow_route(route) then return false end
+        ores[str_xyz(state.location)] = nil
+
+    end
+
+    if not follow_route(fastest_route(valid, state.location, state.orientation, {[start] = true})) then return false end
+
+    if detect.up() then
+        safedig('up')
+    end
+    
+    return true
+end
+
+
+function clear_gravity_blocks()
+    for _, direction in pairs({'forward', 'up'}) do
+        while config.gravitynames[ ({inspect[direction]()})[2].name ] do
+            safedig(direction)
+            sleep(1)
+        end
+    end
+    return true
+end]===],
+    ["turtle_files/basics.lua"] = [===[inf = 1e309
+
+bumps = {
+    north = { 0,  0, -1},
+    south = { 0,  0,  1},
+    east  = { 1,  0,  0},
+    west  = {-1,  0,  0},
+}
+
+left_shift = {
+    north = 'west',
+    south = 'east',
+    east  = 'north',
+    west  = 'south',
+}
+
+right_shift = {
+    north = 'east',
+    south = 'west',
+    east  = 'south',
+    west  = 'north',
+}
+
+reverse_shift = {
+    north = 'south',
+    south = 'north',
+    east  = 'west',
+    west  = 'east',
+}
+
+function dprint(thing)
+    -- PRINT; IF TABLE PRINT EACH ITEM
+    if type(thing) == 'table' then
+        for k, v in pairs(thing) do
+            print(tostring(k) .. ': ' .. tostring(v))
+        end
+    else
+        print(thing)
+    end
+    return true
+end
+
+
+function str_xyz(coords, facing)
+    if facing then
+        return coords.x .. ',' .. coords.y .. ',' .. coords.z .. ':' .. facing
+    else
+        return coords.x .. ',' .. coords.y .. ',' .. coords.z
+    end
+end
+
+
+function distance(point_1, point_2)
+    return math.abs(point_1.x - point_2.x)
+         + math.abs(point_1.y - point_2.y)
+         + math.abs(point_1.z - point_2.z)
+end
+
+
+function in_area(xyz, area)
+    return xyz.x <= area.max_x and xyz.x >= area.min_x and xyz.y <= area.max_y and xyz.y >= area.min_y and xyz.z <= area.max_z and xyz.z >= area.min_z
+end
+
+
+function in_location(xyzo, location)
+    for _, axis in pairs({'x', 'y', 'z'}) do
+        if location[axis] then
+            if location[axis] ~= xyzo[axis] then
+                return false
+            end
+        end
+    end
+    return true
+end]===],
+    ["turtle_files/config.lua"] = [===[]===],
+    ["turtle_files/mastermine.lua"] = [===[function parse_requests()
+    -- PROCESS ALL REDNET REQUESTS
+    while #state.requests > 0 do
+        local request = table.remove(state.requests, 1)
+        sender, message, protocol = request[1], request[2], request[3]
+        if message.action == 'shutdown' then
+            os.shutdown()
+        elseif message.action == 'reboot' then
+            os.reboot()
+        elseif message.action == 'update' then
+            os.run({}, '/update')
+        elseif message.request_id == -1 or message.request_id == state.request_id then -- MAKE SURE REQUEST IS CURRENT
+            if state.initialized or message.action == 'initialize' then
+                print('Directive: ' .. message.action)
+                state.busy = true
+                state.success = actions[message.action](unpack(message.data)) -- EXECUTE DESIRED FUNCTION WITH DESIRED ARGUMENTS
+                state.busy = false
+                if not state.success then
+                    sleep(1)
+                end
+                state.request_id = state.request_id + 1
+            end
+        end
+    end
+end
+
+
+function main()
+    state.last_ping = os.clock()
+    while true do
+        parse_requests()
+        sleep(0.3)
+    end
+end
+
+
+main()]===],
+    ["turtle_files/receive.lua"] = [===[-- CONTINUOUSLY RECIEVE REDNET MESSAGES
+while true do
+    signal = {rednet.receive('mastermine')}
+    if signal[2].action == 'shutdown' then
+        os.shutdown()
+    elseif signal[2].action == 'reboot' then
+        os.reboot()
+    elseif signal[2].action == 'update' then
+        os.run({}, '/update')
+    else
+        table.insert(state.requests, signal)
+    end
+end]===],
+    ["turtle_files/report.lua"] = [===[-- CONTINUOUSLY BROADCAST STATUS REPORTS
+hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
+
+while true do
+
+    state.item_count = 0
+    state.empty_slot_count = 16
+    for slot = 1, 16 do
+        slot_item_count = turtle.getItemCount(slot)
+        if slot_item_count > 0 then
+            state.empty_slot_count = state.empty_slot_count - 1
+            state.item_count = state.item_count + slot_item_count
+        end
+    end
+    
+    rednet.send(hub_id, {
+            session_id       = state.session_id,
+            request_id       = state.request_id,
+            turtle_type      = state.type,
+            peripheral_left  = state.peripheral_left,
+            peripheral_right = state.peripheral_right,
+            updated_not_home = state.updated_not_home,
+            location         = state.location,
+            orientation      = state.orientation,
+            fuel_level       = turtle.getFuelLevel(),
+            item_count       = state.item_count,
+            empty_slot_count = state.empty_slot_count,
+            distance         = state.distance,
+            strip            = state.strip,
+            success          = state.success,
+            busy             = state.busy,
+        }, 'turtle_report')
+    
+    sleep(0.5)
+    
+end]===],
+    ["turtle_files/startup.lua"] = [===[-- SET LABEL
+os.setComputerLabel('Turtle ' .. os.getComputerID())
+
+-- INITIALIZE APIS
+if fs.exists('/apis') then
+    fs.delete('/apis')
+end
+fs.makeDir('/apis')
+fs.copy('/config.lua', '/apis/config')
+fs.copy('/state.lua', '/apis/state')
+fs.copy('/basics.lua', '/apis/basics')
+fs.copy('/actions.lua', '/apis/actions')
+os.loadAPI('/apis/config')
+os.loadAPI('/apis/state')
+os.loadAPI('/apis/basics')
+os.loadAPI('/apis/actions')
+
+
+-- OPEN REDNET
+for _, side in pairs({'back', 'top', 'left', 'right'}) do
+    if peripheral.getType(side) == 'modem' then
+        rednet.open(side)
+        break
+    end
+end
+
+
+-- IF UPDATED PRINT "UPDATED"
+if fs.exists('/updated') then
+    fs.delete('/updated')
+    print('UPDATED')
+    state.updated_not_home = true
+end
+
+
+-- LAUNCH PROGRAMS AS SEPARATE THREADS
+multishell.launch({}, '/report.lua')
+multishell.launch({}, '/receive.lua')
+multishell.launch({}, '/mastermine.lua')
+multishell.setTitle(2, 'report')
+multishell.setTitle(3, 'receive')
+multishell.setTitle(4, 'mastermine')]===],
+    ["turtle_files/state.lua"] = [===[request_id = 1
+requests = {}
+busy = false]===],
+    ["turtle_files/update"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
+
+print('Sending update request...')
+rednet.send(hub_id, '/disk/turtle_files/', 'update_request')
+local sender, message, protocal = rednet.receive('update_package')
+
+for _, file_name in pairs(fs.list('/')) do
+    if file_name ~= 'rom' and file_name ~= 'persistent' then
+        fs.delete(file_name)
+    end
+end
+
+for file_name, file_contents in pairs(message) do
+    file = fs.open(file_name, 'w')
+    file.write(file_contents)
+    file.close()
+end
+
+os.reboot()]===],
+    ["turtle_files/updated"] = [===[]===],
+    ["pocket_files/info.lua"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
+
+while true do
+    sender, hub_state, _ = rednet.receive('hub_report')
+    if sender == hub_id then
+        term.clear()
+        term.setCursorPos(1, 1)
+        term.setTextColor(colors.white)
+        term.write('POWER: ')
+        if hub_state.on then
+            term.setTextColor(colors.green)
+            print('ON')
+        else
+            term.setTextColor(colors.red)
+            print('OFF')
+        end
+        term.setTextColor(colors.white)
+        term.write('TURTLES PARKED: ')
+        if hub_state.turtles_parked >= hub_state.turtle_count then
+            term.setTextColor(colors.green)
+        else
+            term.setTextColor(colors.red)
+        end
+        term.write(hub_state.turtles_parked)
+    end
+end]===],
+    ["pocket_files/report.lua"] = [===[-- CONTINUOUSLY BROADCAST STATUS REPORTS
+hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
+
+while true do
+    
+    local x, y, z = gps.locate()
+    
+    rednet.send(hub_id, {
+            location = {x = x, y = y, z = z},
+        }, 'pocket_report')
+    
+    sleep(0.5)
+    
+end]===],
+    ["pocket_files/startup.lua"] = [===[-- SET LABEL
+os.setComputerLabel('pocket ' .. os.getComputerID())
+
+
+-- OPEN REDNET
+rednet.open('back')
+
+
+-- IF UPDATED PRINT "UPDATED"
+if fs.exists('/updated') then
+    fs.delete('/updated')
+    print('UPDATED')
+end
+
+
+-- LAUNCH PROGRAMS AS SEPARATE THREADS
+multishell.launch({}, '/user.lua')
+multishell.launch({}, '/info.lua')
+multishell.launch({}, '/report.lua')
+multishell.setTitle(2, 'usr')
+multishell.setTitle(3, 'info')
+multishell.setTitle(4, 'rep')]===],
+    ["pocket_files/update"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
+rednet.open('back')
+
+print('Sending update request...')
+rednet.broadcast('/disk/pocket_files/', 'update_request')
+local sender, message, protocal = rednet.receive('update_package')
+
+for _, file_name in pairs(fs.list('/')) do
+    if file_name ~= 'rom' and file_name ~= 'disk' and file_name ~= 'persistent' then
+        fs.delete(file_name)
+    end
+end
+
+for file_name, file_contents in pairs(message) do
+    file = fs.open(file_name, 'w')
+    file.write(file_contents)
+    file.close()
+end
+
+os.reboot()]===],
+    ["pocket_files/updated"] = [===[]===],
+    ["pocket_files/user.lua"] = [===[-- CONTINUOUSLY AWAIT USER INPUT AND PLACE IN TABLE
+while true do
+    rednet.broadcast(read(), 'user_input')
+end]===],
     ["hub_files/basics.lua"] = [===[inf = 1e309
 
 bumps = {
@@ -503,8 +1691,7 @@ default_monitor_zoom_level = 0
 
 -- CENTER OF THE MAP SCREEN
 --     probably want the mine center
-default_monitor_location = {x = c.x, z = c.z}
-]===],
+default_monitor_location = {x = c.x, z = c.z}]===],
     ["hub_files/events.lua"] = [===[while true do
     event = {os.pullEvent()}
     if event[1] == 'rednet_message' then
@@ -559,33 +1746,6 @@ default_monitor_location = {x = c.x, z = c.z}
         end
     end
 end]===],
-    ["hub_files/hub.lua"] = [===[-- Helper startup for hub to support multiple mines on disk update
--- Mirrors top-level hub.lua behavior
-if fs.exists('/disk/hub_files/session_id') then
-    fs.delete('/disk/hub_files/session_id')
-end
-if fs.exists('/session_id') then
-    fs.copy('/session_id', '/disk/hub_files/session_id')
-end
-if fs.exists('/disk/hub_files/mine') then
-    fs.delete('/disk/hub_files/mine')
-end
-if fs.exists('/mine') then
-    fs.copy('/mine', '/disk/hub_files/mine')
-end
-
-for _, filename in pairs(fs.list('/')) do
-    if filename ~= 'rom' and filename ~= 'disk' and filename ~= 'openp' and filename ~= 'ppp' and filename ~= 'persistent' then
-        fs.delete(filename)
-    end
-end
-for _, filename in pairs(fs.list('/disk/hub_files')) do
-    fs.copy('/disk/hub_files/' .. filename, '/' .. filename)
-end
-os.reboot()
-
-
-]===],
     ["hub_files/monitor.lua"] = [===[menu_lines = {
     '#   # ##### #   # #####',
     '## ##   #   ##  # #',
@@ -1545,6 +2705,7 @@ while true do
     sleep(0.5)
     
 end]===],
+    ["hub_files/session_id"] = [===[29.0]===],
     ["hub_files/startup.lua"] = [===[-- SET LABEL
 os.setComputerLabel('Hub')
 
@@ -1613,15 +2774,21 @@ reverse_shift = {
 
 function load_mine()
     -- LOAD MINE INTO state.mine FROM /mine/<x,z>/ DIRECTORY
+    print("DEBUG: Loading mine from directory...")
     state.mine_dir_path = '/mine/' .. config.locations.mine_enter.x .. ',' .. config.locations.mine_enter.z .. '/'
+    print("DEBUG: Mine directory path: " .. state.mine_dir_path)
     state.mine = {}
     
     if not fs.exists(state.mine_dir_path) then
+        print("DEBUG: Creating new mine directory")
         fs.makeDir(state.mine_dir_path)
     end
     
     if fs.exists(state.mine_dir_path .. 'on') then
+        print("DEBUG: Mine is set to ON")
         state.on = true
+    else
+        print("DEBUG: Mine is set to OFF")
     end
     
     for _, level_and_chance in pairs(config.mine_levels) do
@@ -1785,10 +2952,14 @@ end
 
 function gen_next_strip()
     local level = get_mining_level()
+    print("DEBUG: Generating next strip for level: " .. tostring(level))
     state.next_strip = get_closest_free_strip(level)
     if state.next_strip then
+        print("DEBUG: Next strip found at " .. state.next_strip.x .. "," .. state.next_strip.y .. "," .. state.next_strip.z .. " facing " .. state.next_strip.orientation)
         state.min_fuel = (basics.distance(state.next_strip, config.locations.mine_enter) + config.mission_length) * 3
+        print("DEBUG: Minimum fuel required: " .. state.min_fuel)
     else
+        print("DEBUG: No available strips found")
         state.min_fuel = nil
     end
 end
@@ -1868,6 +3039,10 @@ end
 
 
 function go_mine(mining_turtle)
+    print("DEBUG: Sending turtle " .. mining_turtle.id .. " to mine at strip " .. mining_turtle.strip.x .. "," .. mining_turtle.strip.y .. "," .. mining_turtle.strip.z)
+    print("DEBUG: Mining direction: " .. mining_turtle.strip.orientation)
+    print("DEBUG: Steps left before mining: " .. mining_turtle.steps_left)
+    
     update_strip(mining_turtle)
     add_task(mining_turtle, {
         action = 'mine_vein',
@@ -1877,6 +3052,7 @@ function go_mine(mining_turtle)
         action = 'clear_gravity_blocks',
     })
     if config.use_chunky_turtles then
+        print("DEBUG: Using chunky turtles - setting up follow pattern")
         add_task(mining_turtle, {
             action = 'go_to_strip',
             data = {mining_turtle.strip},
@@ -1885,6 +3061,7 @@ function go_mine(mining_turtle)
             end_function_args = {mining_turtle.pair},
         })
     else
+        print("DEBUG: Solo mining mode - no chunky turtle")
         add_task(mining_turtle, {
             action = 'go_to_strip',
             data = {mining_turtle.strip},
@@ -1892,6 +3069,7 @@ function go_mine(mining_turtle)
         })
     end
     mining_turtle.steps_left = mining_turtle.steps_left - 1
+    print("DEBUG: Steps remaining after mining: " .. mining_turtle.steps_left)
     local file = fs.open(state.turtles_dir_path .. mining_turtle.id .. '/deployed', 'w')
     file.write(mining_turtle.steps_left)
     file.close()
@@ -1929,6 +3107,10 @@ end
 
 
 function pair_turtles_begin(turtle1, turtle2)
+    print("DEBUG: Beginning turtle pairing process")
+    print("DEBUG: Turtle 1 - ID: " .. turtle1.id .. " Type: " .. tostring(turtle1.data.turtle_type))
+    print("DEBUG: Turtle 2 - ID: " .. turtle2.id .. " Type: " .. tostring(turtle2.data.turtle_type))
+    
     local mining_turtle
     local chunky_turtle
     if turtle1.data.turtle_type == 'mining' then
@@ -1945,17 +3127,21 @@ function pair_turtles_begin(turtle1, turtle2)
         mining_turtle = turtle2
     end
     
+    print("DEBUG: Mining turtle: " .. mining_turtle.id)
+    print("DEBUG: Chunky turtle: " .. chunky_turtle.id)
+    
     local strip = state.next_strip
-    local level = strip.level
+    local level = strip and strip.level or nil
     
     if not strip then
+        print("DEBUG: No strip available, regenerating and setting turtles to idle")
         gen_next_strip()
         add_task(mining_turtle, {action = 'pass', end_state = 'idle'})
         add_task(chunky_turtle, {action = 'pass', end_state = 'idle'})
         return
     end
     
-    print('Pairing ' .. mining_turtle.id .. ' and ' .. chunky_turtle.id)
+    print('DEBUG: Pairing ' .. mining_turtle.id .. ' and ' .. chunky_turtle.id .. ' for strip at ' .. strip.x .. ',' .. strip.y .. ',' .. strip.z)
     
     mining_turtle.pair = chunky_turtle
     chunky_turtle.pair = mining_turtle
@@ -1994,17 +3180,20 @@ end
 
 
 function solo_turtle_begin(turtle)
+    print("DEBUG: Beginning solo turtle assignment")
+    print("DEBUG: Turtle ID: " .. turtle.id .. " Type: " .. tostring(turtle.data.turtle_type))
     
     local strip = state.next_strip
-    local level = strip.level
+    local level = strip and strip.level or nil
     
     if not strip then
+        print("DEBUG: No strip available for solo turtle, regenerating and setting to idle")
         gen_next_strip()
         add_task(turtle, {action = 'pass', end_state = 'idle'})
         return
     end
     
-    print('Assigning ' .. turtle.id)
+    print('DEBUG: Assigning solo turtle ' .. turtle.id .. ' to strip at ' .. strip.x .. ',' .. strip.y .. ',' .. strip.z)
         
     turtle.steps_left = config.mission_length
     
@@ -2035,13 +3224,18 @@ end
 
 
 function check_pair_fuel(turtle)
+    print("DEBUG: Checking fuel for turtle " .. turtle.id)
     if state.min_fuel then
+        print("DEBUG: Turtle " .. turtle.id .. " fuel level: " .. tostring(turtle.data.fuel_level) .. ", required: " .. state.min_fuel)
         if (turtle.data.fuel_level ~= "unlimited" and turtle.data.fuel_level <= state.min_fuel) then
+            print("DEBUG: Turtle " .. turtle.id .. " needs fuel, sending to prepare")
             add_task(turtle, {action = 'prepare', data = {state.min_fuel}})
         else
+            print("DEBUG: Turtle " .. turtle.id .. " has sufficient fuel, ready to pair")
             add_task(turtle, {action = 'pass', end_state = 'pair'})
         end
     else
+        print("DEBUG: No minimum fuel set, generating next strip")
         gen_next_strip()
     end
 end
@@ -2062,13 +3256,18 @@ end
 
 
 function initialize_turtle(turtle)
+    print("DEBUG: Initializing turtle " .. turtle.id)
     local data = {session_id, config}
     
     if turtle.state ~= 'halt' then
+        print("DEBUG: Setting turtle " .. turtle.id .. " state to 'lost'")
         turtle.state = 'lost'
+    else
+        print("DEBUG: Turtle " .. turtle.id .. " remains in 'halt' state")
     end
     turtle.task_id = 2
     turtle.tasks = {}
+    print("DEBUG: Sending initialize task to turtle " .. turtle.id)
     add_task(turtle, {action = 'initialize', data = data})
 end
 
@@ -2077,6 +3276,7 @@ function add_task(turtle, task)
     if not task.data then
         task.data = {}
     end
+    print("DEBUG: Adding task '" .. task.action .. "' to turtle " .. turtle.id .. " (tasks in queue: " .. (#turtle.tasks + 1) .. ")")
     table.insert(turtle.tasks, task)
 end
 
@@ -2087,13 +3287,17 @@ function send_tasks(turtle)
         local turtle_data = turtle.data
         if turtle_data.request_id == turtle.task_id and turtle.data.session_id == session_id then
             if turtle_data.success then
+                print("DEBUG: Task '" .. task.action .. "' completed successfully for turtle " .. turtle.id)
                 if task.end_state then
                     if turtle.state == 'halt' and task.end_state ~= 'halt' then
+                        print("DEBUG: Unhalting turtle " .. turtle.id)
                         unhalt(turtle)
                     end
+                    print("DEBUG: Changing turtle " .. turtle.id .. " state from '" .. turtle.state .. "' to '" .. task.end_state .. "'")
                     turtle.state = task.end_state
                 end
                 if task.end_function then
+                    print("DEBUG: Executing end function for turtle " .. turtle.id)
                     if task.end_function_args then
                         task.end_function(unpack(task.end_function_args))
                     else
@@ -2101,12 +3305,15 @@ function send_tasks(turtle)
                     end
                 end
                 table.remove(turtle.tasks, 1)
+                print("DEBUG: Task removed, turtle " .. turtle.id .. " has " .. #turtle.tasks .. " tasks remaining")
+            else
+                print("DEBUG: Task '" .. task.action .. "' failed for turtle " .. turtle.id)
             end
             turtle.task_id = turtle.task_id + 1
         elseif (not turtle_data.busy) and ((not task.epoch) or (task.epoch > os.clock()) or (task.epoch + config.task_timeout < os.clock())) then
             -- ONLY SEND INSTRUCTION AFTER <config.task_timeout> SECONDS HAVE PASSED
             task.epoch = os.clock()
-            print(string.format('Sending %s directive to %d', task.action, turtle.id))
+            print(string.format('DEBUG: Sending %s directive to %d', task.action, turtle.id))
             rednet.send(turtle.id, {
                 action = task.action,
                 data = task.data,
@@ -2252,9 +3459,11 @@ function command_turtles()
     for _, turtle in pairs(state.turtles) do
         
         if turtle.data then
+            print("DEBUG: Processing turtle " .. turtle.id .. " - State: " .. tostring(turtle.state) .. ", Type: " .. tostring(turtle.data.turtle_type))
         
             if turtle.data.session_id ~= session_id then
                 -- BABY TURTLE NEEDS TO LEARN
+                print("DEBUG: Turtle " .. turtle.id .. " has wrong session ID, initializing")
                 if (not turtle.tasks) or (not turtle.tasks[1]) or (not (turtle.tasks[1].action == 'initialize')) then
                     initialize_turtle(turtle)
                 end
@@ -2262,27 +3471,34 @@ function command_turtles()
 
             if #turtle.tasks > 0 then
                 -- TURTLE IS BUSY
+                print("DEBUG: Turtle " .. turtle.id .. " is busy with " .. #turtle.tasks .. " tasks")
                 send_tasks(turtle)
 
             elseif not turtle.data.location then
                 -- TURTLE NEEDS A MAP
+                print("DEBUG: Turtle " .. turtle.id .. " needs location calibration")
                 add_task(turtle, {action = 'calibrate'})
 
             elseif turtle.state ~= 'halt' then
 
                 if turtle.state == 'park' then
                     -- TURTLE FOUND PARKING
+                    print("DEBUG: Turtle " .. turtle.id .. " is parked")
                     if state.on and (config.use_chunky_turtles or turtle.data.turtle_type == 'mining') then
+                        print("DEBUG: Mine is on, moving turtle " .. turtle.id .. " from park to idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
 
                 elseif not state.on and turtle.state ~= 'idle' then
                     -- TURTLE HAS TO STOP
+                    print("DEBUG: Mine is off, moving turtle " .. turtle.id .. " to idle")
                     add_task(turtle, {action = 'pass', end_state = 'idle'})
 
                 elseif turtle.state == 'lost' then
                     -- TURTLE IS CONFUSED
+                    print("DEBUG: Turtle " .. turtle.id .. " is lost")
                     if turtle.data.location.y < config.locations.mine_enter.y and (turtle.pair or not config.use_chunky_turtles) then
+                        print("DEBUG: Lost turtle " .. turtle.id .. " is underground with pair/solo mode, resuming mining")
                         add_task(turtle, {action = 'pass', end_state = 'trip'})
                         add_task(turtle, {
                             action = 'go_to_strip',
@@ -2290,57 +3506,73 @@ function command_turtles()
                             end_state = 'wait'
                         })
                     else
+                        print("DEBUG: Lost turtle " .. turtle.id .. " going to idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
 
                 elseif turtle.state == 'idle' then
                     -- TURTLE IS BORED
+                    print("DEBUG: Turtle " .. turtle.id .. " is idle")
                     free_turtle(turtle)
                     if turtle.data.location.y < config.locations.mine_enter.y then
+                        print("DEBUG: Idle turtle " .. turtle.id .. " is underground, sending up")
                         send_turtle_up(turtle)
                     elseif not basics.in_area(turtle.data.location, config.locations.control_room_area) then
+                        print("DEBUG: Idle turtle " .. turtle.id .. " is outside control room, halting")
                         halt(turtle)
                     elseif turtle.data.item_count > 0 or (turtle.data.fuel_level ~= "unlimited" and turtle.data.fuel_level < config.fuel_per_unit) then
+                        print("DEBUG: Idle turtle " .. turtle.id .. " needs supplies, preparing")
                         add_task(turtle, {action = 'prepare', data = {config.fuel_per_unit}})
                     elseif state.on then
+                        print("DEBUG: Idle turtle " .. turtle.id .. " ready for deployment, going to waiting room")
                         add_task(turtle, {
                             action = 'go_to_waiting_room',
                             end_function = check_pair_fuel,
                             end_function_args = {turtle},
                         })
                     else
+                        print("DEBUG: Idle turtle " .. turtle.id .. " going home to park (mine off)")
                         add_task(turtle, {action = 'go_to_home', end_state = 'park'})
                     end
 
                 elseif turtle.state == 'pair' then
                     -- TURTLE NEEDS A FRIEND
+                    print("DEBUG: Turtle " .. turtle.id .. " is ready to pair")
                     if config.use_chunky_turtles then
                         if not state.pair_hold then
                             if not turtle.pair then
+                                print("DEBUG: Adding turtle " .. turtle.id .. " to pairing queue")
                                 table.insert(turtles_for_pair, turtle)
                             end
                         else
                             if not (state.pair_hold[1].pair and state.pair_hold[2].pair) then
+                                print("DEBUG: Clearing invalid pair hold")
                                 state.pair_hold = nil
                             end
                         end
                     else
+                        print("DEBUG: Solo turtle mode, assigning turtle " .. turtle.id .. " individually")
                         solo_turtle_begin(turtle)
                     end
 
                 elseif turtle.state == 'wait' then
                     -- TURTLE GO DO SOME WORK
+                    print("DEBUG: Turtle " .. turtle.id .. " is waiting for work")
                     if turtle.pair then
                         if turtle.data.turtle_type == 'mining' and turtle.pair.state == 'wait' then
+                            print("DEBUG: Mining turtle " .. turtle.id .. " and chunky turtle " .. turtle.pair.id .. " both waiting")
                             if turtle.steps_left <= 0 or (turtle.data.empty_slot_count == 0 and turtle.pair.data.empty_slot_count == 0) or not good_on_fuel(turtle, turtle.pair) then
+                                print("DEBUG: Paired turtles " .. turtle.id .. "/" .. turtle.pair.id .. " finished mission (steps: " .. turtle.steps_left .. ", fuel good: " .. tostring(good_on_fuel(turtle, turtle.pair)) .. ")")
                                 add_task(turtle, {action = 'pass', end_state = 'idle'})
                                 add_task(turtle.pair, {action = 'pass', end_state = 'idle'})
                             elseif turtle.data.empty_slot_count == 0 then
+                                print("DEBUG: Mining turtle " .. turtle.id .. " inventory full, dumping")
                                 add_task(turtle, {
                                     action = 'dump',
                                     data = {reverse_shift[turtle.strip.orientation]}
                                 })
                             else
+                                print("DEBUG: Sending paired turtles " .. turtle.id .. "/" .. turtle.pair.id .. " to mine")
                                 add_task(turtle, {action = 'pass', end_state = 'mine'})
                                 add_task(turtle.pair, {action = 'pass', end_state = 'mine'})
                                 go_mine(turtle)
@@ -2348,16 +3580,21 @@ function command_turtles()
                         end
                     elseif not config.use_chunky_turtles then
                         if turtle.steps_left <= 0 or turtle.data.empty_slot_count == 0 or not good_on_fuel(turtle) then
+                            print("DEBUG: Solo turtle " .. turtle.id .. " finished mission (steps: " .. turtle.steps_left .. ", fuel good: " .. tostring(good_on_fuel(turtle)) .. ")")
                             add_task(turtle, {action = 'pass', end_state = 'idle'})
                         else
+                            print("DEBUG: Sending solo turtle " .. turtle.id .. " to mine")
                             add_task(turtle, {action = 'pass', end_state = 'mine'})
                             go_mine(turtle)
                         end
                     else
+                        print("DEBUG: Turtle " .. turtle.id .. " waiting but no valid pairing, going idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
                 elseif turtle.state == 'mine' then
+                    print("DEBUG: Turtle " .. turtle.id .. " is in mine state")
                     if config.use_chunky_turtles and not turtle.pair then
+                        print("DEBUG: Mining turtle " .. turtle.id .. " lost its pair, going idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
                 end
@@ -2365,7 +3602,12 @@ function command_turtles()
         end
     end
     if #turtles_for_pair == 2 then
+        print("DEBUG: Found 2 turtles ready for pairing: " .. turtles_for_pair[1].id .. " and " .. turtles_for_pair[2].id)
         pair_turtles_begin(turtles_for_pair[1], turtles_for_pair[2])
+    elseif #turtles_for_pair == 1 then
+        print("DEBUG: Only 1 turtle waiting for pairing: " .. turtles_for_pair[1].id)
+    elseif #turtles_for_pair > 2 then
+        print("DEBUG: " .. #turtles_for_pair .. " turtles waiting for pairing")
     end
 end
 
@@ -2377,6 +3619,7 @@ function main()
     else
         session_id = 1
     end
+    print("DEBUG: Starting mastermine with session ID: " .. session_id)
     local file = fs.open('/session_id', 'w')
     file.write(session_id)
     file.close()
@@ -2387,9 +3630,13 @@ function main()
     -- FIND THE CLOSEST STRIP
     gen_next_strip()
     
+    print("DEBUG: Mastermine initialization complete")
+    print("DEBUG: Mine status: " .. (state.on and "ON" or "OFF"))
+    print("DEBUG: Use chunky turtles: " .. tostring(config.use_chunky_turtles))
+    
     local cycle = 0
     while true do
-        print('Cycle: ' .. cycle)
+        print('DEBUG: Cycle: ' .. cycle .. ' (Active turtles: ' .. (function() local count = 0; for _ in pairs(state.turtles) do count = count + 1 end; return count end)() .. ')')
         user_input()         -- PROCESS USER INPUT
         command_turtles()    -- COMMAND TURTLES
         sleep(0.1)           -- DELAY 0.1 SECONDS
@@ -2399,1311 +3646,10 @@ end
 
 
 main()]===],
-    ["hub.lua"] = [===[if fs.exists('/disk/hub_files/session_id') then
-    fs.delete('/disk/hub_files/session_id')
-end
-if fs.exists('/session_id') then
-    fs.copy('/session_id', '/disk/hub_files/session_id')
-end
-if fs.exists('/disk/hub_files/mine') then
-    fs.delete('/disk/hub_files/mine')
-end
-if fs.exists('/mine') then
-    fs.copy('/mine', '/disk/hub_files/mine')
-end
-
-for _, filename in pairs(fs.list('/')) do
-    if filename ~= 'rom' and filename ~= 'disk' and filename ~= 'openp' and filename ~= 'ppp' and filename ~= 'persistent' then
-        fs.delete(filename)
-    end
-end
-for _, filename in pairs(fs.list('/disk/hub_files')) do
-    fs.copy('/disk/hub_files/' .. filename, '/' .. filename)
-end
-os.reboot()
-]===],
-    ["LICENSE"] = [===[MIT License
-
-Copyright (c) 2020 MerlinLikeTheWizard
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-]===],
-    ["pocket_files/info.lua"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
-
-while true do
-    sender, hub_state, _ = rednet.receive('hub_report')
-    if sender == hub_id then
-        term.clear()
-        term.setCursorPos(1, 1)
-        term.setTextColor(colors.white)
-        term.write('POWER: ')
-        if hub_state.on then
-            term.setTextColor(colors.green)
-            print('ON')
-        else
-            term.setTextColor(colors.red)
-            print('OFF')
-        end
-        term.setTextColor(colors.white)
-        term.write('TURTLES PARKED: ')
-        if hub_state.turtles_parked >= hub_state.turtle_count then
-            term.setTextColor(colors.green)
-        else
-            term.setTextColor(colors.red)
-        end
-        term.write(hub_state.turtles_parked)
-    end
-end]===],
-    ["pocket_files/report.lua"] = [===[-- CONTINUOUSLY BROADCAST STATUS REPORTS
-hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
-
-while true do
-    
-    local x, y, z = gps.locate()
-    
-    rednet.send(hub_id, {
-            location = {x = x, y = y, z = z},
-        }, 'pocket_report')
-    
-    sleep(0.5)
-    
-end]===],
-    ["pocket_files/startup.lua"] = [===[-- SET LABEL
-os.setComputerLabel('pocket ' .. os.getComputerID())
-
-
--- OPEN REDNET
-rednet.open('back')
-
-
--- IF UPDATED PRINT "UPDATED"
-if fs.exists('/updated') then
-    fs.delete('/updated')
-    print('UPDATED')
-end
-
-
--- LAUNCH PROGRAMS AS SEPARATE THREADS
-multishell.launch({}, '/user.lua')
-multishell.launch({}, '/info.lua')
-multishell.launch({}, '/report.lua')
-multishell.setTitle(2, 'usr')
-multishell.setTitle(3, 'info')
-multishell.setTitle(4, 'rep')]===],
-    ["pocket_files/update"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
-rednet.open('back')
-
-print('Sending update request...')
-rednet.broadcast('/disk/pocket_files/', 'update_request')
-local sender, message, protocal = rednet.receive('update_package')
-
-for _, file_name in pairs(fs.list('/')) do
-    if file_name ~= 'rom' and file_name ~= 'disk' and file_name ~= 'persistent' then
-        fs.delete(file_name)
-    end
-end
-
-for file_name, file_contents in pairs(message) do
-    file = fs.open(file_name, 'w')
-    file.write(file_contents)
-    file.close()
-end
-
-os.reboot()]===],
-    ["pocket_files/updated"] = [===[]===],
-    ["pocket_files/user.lua"] = [===[-- CONTINUOUSLY AWAIT USER INPUT AND PLACE IN TABLE
-while true do
-    rednet.broadcast(read(), 'user_input')
-end]===],
-    ["pocket.lua"] = [===[local src, dest = ...
-
-fs.copy(fs.combine(src, 'pocket_files/update'), fs.combine(dest, 'update'))
-file = fs.open(fs.combine(dest, 'hub_id'), 'w')
-file.write(os.getComputerID())
-file.close()]===],
-    ["README.md"] = [===[# Mastermine
-A fully automated strip mining network for ComputerCraft turtles!
-
-Here's all the code for anyone who is interested! Check out the tutorial below for installation instructions.
-
-Also, here are steps for a quick install via pastebin:
-
-1. Place your advanced computer next to a disk drive with a blank disk in.
-2. Run `pastebin get CtcSGkpc mastermine.lua`
-3. Run `mastermine disk`
-4. Run `disk/hub.lua`
-
-## Play with or without Peripherals:
-
-I highly recommend using the a peripherals mod with chunky turtles, but upon popular request I added the ability to disable the need for chunky turtle pairs. Just go to the config and set `use_chunky_turtles = false`
-
-## Video description:
-
-[![https://www.youtube.com/watch?v=2I2VXl9Pg6Q](https://img.youtube.com/vi/2I2VXl9Pg6Q/0.jpg)](https://www.youtube.com/watch?v=2I2VXl9Pg6Q)
-
-## Video tutorial:
-
-[![https://www.youtube.com/watch?v=2DTP1LXuiCg](https://img.youtube.com/vi/2DTP1LXuiCg/0.jpg)](https://www.youtube.com/watch?v=2DTP1LXuiCg)
-
-## Troubleshooting:
-
-After having some chats with folks it seems like there are some common pitfalls within the turtle setup. If you're getting weird behavior I suggest taking a look at this list before posting an issue. Otherwise, please let me know your problem and we can take a look together.
-
-* ***GPS has an incorrect coordinate.*** There are 4 computers in the GPS setup, each with an x, y, and z coordinate. If any of these numbers are entered wrong the GPS will act funky and nothing will work. A good way to test it's working is to enter `gps locate` into any rednet enabled computer or turtle and verify the answer.
-* ***Mine entrance has an incorrect y value.*** Similarly, the position of `mine_entrance` is essential, and must have the correct y value of the block directly above the ground (same as the disk drive in the videos). If the y value is off, I don't quite know what will happen.
-* ***Turtles are more than 8 blocks away from the mine entrance.*** Turtles have to be within the `control room area` when they are above ground, otherwise they will get lost and end up in `halt` mode. So if your disk drive is 9 or more blocks away from the entrance, the turtles will just sit there not doing anything after you initialize them. The `control_room_area` field in the `hub_files/config.lua` file is adjustable to fit whatever size you need. **Note:** If you have a large number of turtles you may need to increase the control room area to fit a larger turtle parking area.
-* ***Your downloaded program is not up to date.*** Some things, such as compatibility with the new Advanced Peripherals mod, are newer additions and might not exist in the older code. I apologize that there aren't version numbers, I maybe should have a whole releases section but I haven't gotten that far yet. I wasn't expecting such a need for updates. Anyways, you might want to re-download the program periodically, just remember to preserve your config file somehow.
-
-Hopefully that covers a lot of it. Again, lemme know if you still can't get the thing to work.
-
-## User commands:
-
-* `on/go`
-* `off/stop`
-* `turtle <#> <action>`
-* `update <#>`
-* `reboot <#>`
-* `shutdown <#>`
-* `reset <#>`
-* `clear <#>`
-* `halt <#>`
-* `return <#>`
-* `hubupdate`
-* `hubreboot`
-* `hubshutdown`
-
-
-use `*` as notation for all turtles
-
-## Floppy disk limit:
-
-There's a built in limit in computer craft for how much data a floppy disk can store, and as it happens Mastermine is bigger. There are two solutions for dealing with this.
-1. The size of floppy disks can be increased in the mod's config file, assuming you have access to that (this is the preferred option).
-2. There are a number of reasons one might not be able to edit the config file, so there is a second, workaround-y option in which the data isn't fully stored on the disk. To do it, start with the regular computer + monitor + modem + disk drive + floppy disk setup, and then enter the following into the hub computer:
-
-       pastebin get CtcSGkpc mastermine.lua
-       mkdir files
-       mastermine files
-       mv files/hub_files/* .
-       mv files/turtle_files disk
-       mv files/turtle.lua disk
-       reboot
-       
-   After this you should be able to add turtles to the system as usual. The only downside is that you will not be able to update the hub from the disk. All of the hub files will be local. This means the process for editing the config file is slightly different, in that you need to edit the config.lua file on the hub rather than on the disk.
-
-
-## Required mods:
-
-CC Tweaked
-https://www.curseforge.com/minecraft/mc-mods/cc-tweaked
-
-### For Minecraft 1.16:
-
-Advanced Peripherals
-https://www.curseforge.com/minecraft/mc-mods/advanced-peripherals
-
-### For Minecraft 1.12:
-
-Peripherals Plus One
-https://github.com/rolandoislas/PeripheralsPlusOne
-
-Required by PeripheralsPlusOne: https://www.curseforge.com/minecraft/mc-mods/the-framework
-]===],
-    ["turtle_files/actions.lua"] = [===[inf = basics.inf
-str_xyz = basics.str_xyz
-
---lua_print = print
---log_file = fs.open('log.txt', 'w')
---function print(thing)
---    lua_print(thing)
---    log_file.writeLine(thing)
---end
-    
-
-bumps = {
-    north = { 0,  0, -1},
-    south = { 0,  0,  1},
-    east  = { 1,  0,  0},
-    west  = {-1,  0,  0},
 }
-
-
-left_shift = {
-    north = 'west',
-    south = 'east',
-    east  = 'north',
-    west  = 'south',
-}
-
-
-right_shift = {
-    north = 'east',
-    south = 'west',
-    east  = 'south',
-    west  = 'north',
-}
-
-
-reverse_shift = {
-    north = 'south',
-    south = 'north',
-    east  = 'west',
-    west  = 'east',
-}
-
-
-move = {
-    forward = turtle.forward,
-    up      = turtle.up,
-    down    = turtle.down,
-    back    = turtle.back,
-    left    = turtle.turnLeft,
-    right   = turtle.turnRight
-}
-
-
-detect = {
-    forward = turtle.detect,
-    up      = turtle.detectUp,
-    down    = turtle.detectDown
-}
-
-
-inspect = {
-    forward = turtle.inspect,
-    up      = turtle.inspectUp,
-    down    = turtle.inspectDown
-}
-
-
-dig = {
-    forward = turtle.dig,
-    up      = turtle.digUp,
-    down    = turtle.digDown
-}
-
-attack = {
-    forward = turtle.attack,
-    up      = turtle.attackUp,
-    down    = turtle.attackDown
-}
-
-
-getblock = {
-    
-    up = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        return {x = pos.x, y = pos.y + 1, z = pos.z}
-    end,
-
-    down = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        return {x = pos.x, y = pos.y - 1, z = pos.z}
-    end,
-
-    forward = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        local bump = bumps[fac]
-        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
-    end,
-    
-    back = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        local bump = bumps[fac]
-        return {x = pos.x - bump[1], y = pos.y - bump[2], z = pos.z - bump[3]}
-    end,
-    
-    left = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        local bump = bumps[left_shift[fac]]
-        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
-    end,
-    
-    right = function(pos, fac)
-        if not pos then pos = state.location end
-        if not fac then fac = state.orientation end
-        local bump = bumps[right_shift[fac]]
-        return {x = pos.x + bump[1], y = pos.y + bump[2], z = pos.z + bump[3]}
-    end,
-}
-
-
-function digblock(direction)
-    dig[direction]()
-    return true
-end
-
-
-function delay(duration)
-    sleep(duration)
-    return true
-end
-
-
-function up()
-    return go('up')
-end
-
-
-function forward()
-    return go('forward')
-end
-
-
-function down()
-    return go('down')
-end
-
-
-function back()
-    return go('back')
-end
-
-
-function left()
-    return go('left')
-end
-
-
-function right()
-    return go('right')
-end
-
-
-function follow_route(route)
-    for step in route:gmatch'.' do
-        if step == 'u' then
-            if not go('up')      then return false end
-        elseif step == 'f' then
-            if not go('forward') then return false end
-        elseif step == 'd' then
-            if not go('down')    then return false end
-        elseif step == 'b' then
-            if not go('back')    then return false end
-        elseif step == 'l' then
-            if not go('left')    then return false end
-        elseif step == 'r' then
-            if not go('right')   then return false end
-        end
-    end
-    return true
-end
-                    
-                    
-function face(orientation)
-    if state.orientation == orientation then
-        return true
-    elseif right_shift[state.orientation] == orientation then
-        if not go('right') then return false end
-    elseif left_shift[state.orientation] == orientation then
-        if not go('left') then return false end
-    elseif right_shift[right_shift[state.orientation]] == orientation then
-        if not go('right') then return false end
-        if not go('right') then return false end
-    else
-        return false
-    end
-    return true
-end
-
-
-function log_movement(direction)
-    if direction == 'up' then
-        state.location.y = state.location.y +1
-    elseif direction == 'down' then
-        state.location.y = state.location.y -1
-    elseif direction == 'forward' then
-        bump = bumps[state.orientation]
-        state.location = {x = state.location.x + bump[1], y = state.location.y + bump[2], z = state.location.z + bump[3]}
-    elseif direction == 'back' then
-        bump = bumps[state.orientation]
-        state.location = {x = state.location.x - bump[1], y = state.location.y - bump[2], z = state.location.z - bump[3]}
-    elseif direction == 'left' then
-        state.orientation = left_shift[state.orientation]
-    elseif direction == 'right' then
-        state.orientation = right_shift[state.orientation]
-    end
-    return true
-end
-
-
-function go(direction, nodig)
-    if not nodig then
-        if detect[direction] then
-            if detect[direction]() then
-                safedig(direction)
-            end
-        end
-    end
-    if not move[direction] then
-        return false
-    end
-    if not move[direction]() then
-        if attack[direction] then
-            attack[direction]()
-        end
-        return false
-    end
-    log_movement(direction)
-    return true
-end
-
-
-function go_to_axis(axis, coordinate, nodig)
-    local delta = coordinate - state.location[axis]
-    if delta == 0 then
-        return true
-    end
-    
-    if axis == 'x' then
-        if delta > 0 then
-            if not face('east') then return false end
-        else
-            if not face('west') then return false end
-        end
-    elseif axis == 'z' then
-        if delta > 0 then
-            if not face('south') then return false end
-        else
-            if not face('north') then return false end
-        end
-    end
-    
-    for i = 1, math.abs(delta) do
-        if axis == 'y' then
-            if delta > 0 then
-                if not go('up', nodig) then return false end
-            else
-                if not go('down', nodig) then return false end
-            end
-        else
-            if not go('forward', nodig) then return false end
-        end
-    end
-    return true
-end
-
-
-function go_to(end_location, end_orientation, path, nodig)
-    if path then
-        for axis in path:gmatch'.' do
-            if not go_to_axis(axis, end_location[axis], nodig) then return false end
-        end
-    elseif end_location.path then
-        for axis in end_location.path:gmatch'.' do
-            if not go_to_axis(axis, end_location[axis], nodig) then return false end
-        end
-    else
-        return false
-    end
-    if end_orientation then
-        if not face(end_orientation) then return false end
-    elseif end_location.orientation then
-        if not face(end_location.orientation) then return false end
-    end
-    return true
-end
-
-
-function go_route(route, xyzo)
-    local xyz_string
-    if xyzo then
-        xyz_string = str_xyz(xyzo)
-    end
-    local location_str = basics.str_xyz(state.location)
-    while route[location_str] and location_str ~= xyz_string do
-        if not go_to(route[location_str], nil, 'xyz') then return false end
-        location_str = basics.str_xyz(state.location)
-    end
-    if xyzo then
-        if location_str ~= xyz_string then
-            return false
-        end
-        if xyzo.orientation then
-            if not face(xyzo.orientation) then return false end
-        end
-    end
-    return true
-end
-
-
-function go_to_home()
-    state.updated_not_home = nil
-    if basics.in_area(state.location, config.locations.home_area) then
-        return true
-    elseif basics.in_area(state.location, config.locations.greater_home_area) then
-        if not go_to_home_exit() then return false end
-    elseif basics.in_area(state.location, config.locations.waiting_room_area) then
-        if not go_to(config.locations.mine_exit, nil, config.paths.waiting_room_to_mine_exit, true) then return false end
-    elseif state.location.y < config.locations.mine_enter.y then
-        return false
-    end
-    if config.locations.main_loop_route[basics.str_xyz(state.location)] then
-        if not go_route(config.locations.main_loop_route, config.locations.home_enter) then return false end
-    elseif basics.in_area(state.location, config.locations.control_room_area) then
-        if not go_to(config.locations.home_enter, nil, config.paths.control_room_to_home_enter, true) then return false end
-    else
-        return false
-    end
-    if not forward() then return false end
-    while detect.down() do
-        if not forward() then return false end
-    end
-    if not down() then return false end
-    if not right() then return false end
-    if not right() then return false end
-    return true
-end
-
-
-function go_to_home_exit()
-    if basics.in_area(state.location, config.locations.greater_home_area) then
-        if not go_to(config.locations.home_exit, nil, config.paths.home_to_home_exit) then return false end
-    elseif config.locations.main_loop_route[basics.str_xyz(state.location)] then
-        if not go_route(config.locations.main_loop_route, config.locations.home_exit) then return false end
-    else
-        return false
-    end
-    return true
-end
-
-
-function go_to_item_drop()
-    if not config.locations.main_loop_route[basics.str_xyz(state.location)] then
-        if not go_to_home() then return false end
-        if not go_to_home_exit() then return false end
-    end
-    if not go_route(config.locations.main_loop_route, config.locations.item_drop) then return false end
-    return true
-end
-
-
-function go_to_refuel()
-    if not config.locations.main_loop_route[basics.str_xyz(state.location)] then
-        if not go_to_home() then return false end
-        if not go_to_home_exit() then return false end
-    end
-    if not go_route(config.locations.main_loop_route, config.locations.refuel) then return false end
-    return true
-end
-
-
-function go_to_waiting_room()
-    if not basics.in_area(state.location, config.locations.waiting_room_line_area) then
-        if not go_to_home() then return false end
-    end
-    if not go_to(config.locations.waiting_room, nil, config.paths.home_to_waiting_room) then return false end
-    return true
-end
-
-
-function go_to_mine_enter()
-    if not go_route(config.locations.waiting_room_to_mine_enter_route) then return false end
-    return true
-end
-
-
-function go_to_strip(strip)
-    if state.location.y < config.locations.mine_enter.y or basics.in_location(state.location, config.locations.mine_enter) then
-        if state.type == 'mining' then
-            local bump = bumps[strip.orientation]
-            strip = {
-                x = strip.x + bump[1],
-                y = strip.y + bump[2],
-                z = strip.z + bump[3],
-                orientation = strip.orientation
-            }
-        end
-        if not go_to(strip, nil, config.paths.mine_enter_to_strip) then return false end
-        return true
-    end
-end
-
-
-function go_to_mine_exit(strip)
-    if state.location.y < config.locations.mine_enter.y or (state.location.x == config.locations.mine_exit.x and state.location.z == config.locations.mine_exit.z) then
-        if state.location.x == config.locations.mine_enter.x and state.location.z == config.locations.mine_enter.z then
-            -- If directly under mine_enter, shift over to exit
-            if not go_to_axis('z', config.locations.mine_exit.z) then return false end
-        elseif state.location.x ~= config.locations.mine_exit.x or state.location.z ~= config.locations.mine_exit.z then
-            -- If NOT directly under mine_exit go to proper y
-            if not go_to_axis('y', strip.y + 1) then return false end
-            if state.location.z ~= config.locations.mine_enter.z and strip.z ~= config.locations.mine_enter.z then
-                -- If not in main_shaft, find your strip
-                if not go_to_axis('x', strip.x) then return false end
-            end
-            if state.location.x ~= config.locations.mine_exit.x then
-                -- If not in strip x = origin, go to main_shaft
-                if not go_to_axis('z', config.locations.mine_enter.z) then return false end
-            end
-        end
-        if not go_to(config.locations.mine_exit, nil, 'xzy') then return false end
-        return true
-    end
-end
-
-
-function safedig(direction)
-    -- DIG IF BLOCK NOT ON BLACKLIST
-    if not direction then
-        direction = 'forward'
-    end
-    
-    local block_name = ({inspect[direction]()})[2].name
-    if block_name then
-        for _, word in pairs(config.dig_disallow) do
-            if string.find(string.lower(block_name), word) then
-                return false
-            end
-        end
-
-        return dig[direction]()
-    end
-    return true
-end
-
-
-function dump_items(omit)
-    for slot = 1, 16 do
-        if turtle.getItemCount(slot) > 0 and ((not omit) or (not omit[turtle.getItemDetail(slot).name])) then
-            turtle.select(slot)
-            if not turtle.drop() then return false end
-        end
-    end
-    return true
-end
-    
-
-
-function prepare(min_fuel_amount)
-    if state.item_count > 0 then
-        if not go_to_item_drop() then return false end
-        if not dump_items(config.fuelnames) then return false end
-    end
-    local min_fuel_amount = min_fuel_amount + config.fuel_padding
-    if not go_to_refuel() then return false end
-    if not dump_items() then return false end
-    turtle.select(1)
-    if turtle.getFuelLevel() ~= 'unlimited' then
-        while turtle.getFuelLevel() < min_fuel_amount do
-            if not turtle.suck(math.min(64, math.ceil(min_fuel_amount / config.fuel_per_unit))) then return false end
-            turtle.refuel()
-        end
-    end
-    return true
-end
-
-
-function calibrate()
-    -- GEOPOSITION BY MOVING TO ADJACENT BLOCK AND BACK
-    local sx, sy, sz = gps.locate()
---    if sx == config.interface.x and sy == config.interface.y and sz == config.interface.z then
---        refuel()
---    end
-    if not sx or not sy or not sz then
-        return false
-    end
-    for i = 1, 4 do
-        -- TRY TO FIND EMPTY ADJACENT BLOCK
-        if not turtle.detect() then
-            break
-        end
-        if not turtle.turnRight() then return false end
-    end
-    if turtle.detect() then
-        -- TRY TO DIG ADJACENT BLOCK
-        for i = 1, 4 do
-            safedig('forward')
-            if not turtle.detect() then
-                break
-            end
-            if not turtle.turnRight() then return false end
-        end
-        if turtle.detect() then
-            return false
-        end
-    end
-    if not turtle.forward() then return false end
-    local nx, ny, nz = gps.locate()
-    if nx == sx + 1 then
-        state.orientation = 'east'
-    elseif nx == sx - 1 then
-        state.orientation = 'west'
-    elseif nz == sz + 1 then
-        state.orientation = 'south'
-    elseif nz == sz - 1 then
-        state.orientation = 'north'
-    else
-        return false
-    end
-    state.location = {x = nx, y = ny, z = nz}
-    print('Calibrated to ' .. str_xyz(state.location, state.orientation))
-    
-    back()
-    
-    if basics.in_area(state.location, config.locations.home_area) then
-        face(left_shift[left_shift[config.locations.homes.increment]])
-    end
-    
-    return true
-end
-
-
-function initialize(session_id, config_values)
-    -- INITIALIZE TURTLE
-    
-    state.session_id = session_id
-    
-    -- COPY CONFIG DATA INTO MEMORY
-    for k, v in pairs(config_values) do
-        config[k] = v
-    end
-    
-    -- DETERMINE TURTLE TYPE
-    state.peripheral_left = peripheral.getType('left')
-    state.peripheral_right = peripheral.getType('right')
-    if state.peripheral_left == 'chunkLoader' or state.peripheral_right == 'chunkLoader' or state.peripheral_left == 'chunky' or state.peripheral_right == 'chunky' then
-        state.type = 'chunky'
-        for k, v in pairs(config.chunky_turtle_locations) do
-            config.locations[k] = v
-        end
-    else
-        state.type = 'mining'
-        for k, v in pairs(config.mining_turtle_locations) do
-            config.locations[k] = v
-        end
-        if state.peripheral_left == 'modem' then
-            state.peripheral_right = 'pick'
-        else
-            state.peripheral_left = 'pick'
-        end
-    end
-    
-    state.request_id = 1
-    state.initialized = true
-    return true
-end
-
-
-function getcwd()
-    local running_program = shell.getRunningProgram()
-    local program_name = fs.getName(running_program)
-    return "/" .. running_program:sub(1, #running_program - #program_name)
-end
-
-
-function pass()
-    return true
-end
-
-
-function dump(direction)
-    if not face(direction) then return false end
-    if ({inspect.forward()})[2].name ~= 'computercraft:turtle_advanced' then
-        return false
-    end
-    for slot = 1, 16 do
-        if turtle.getItemCount(slot) > 0 then
-            turtle.select(slot)
-            turtle.drop()
-        end
-    end
-    return true
-end
-
-
-function checkTags(data)
-    if type(data.tags) ~= 'table' then
-        return false
-    end
-    if not config.blocktags then
-        return false
-    end
-    for k,v in pairs(data.tags) do
-        if config.blocktags[k] then
-            return true
-        end
-    end
-    return false
-end
-
-
-function detect_ore(direction)
-    local block = ({inspect[direction]()})[2]
-    if block == nil or block.name == nil then
-        return false
-    elseif config.orenames[block.name] then
-        return true
-    elseif checkTags(block) then
-        return true
-    elseif block.name:lower():find("ore") then  
-        return true
-    end
-    return false
-end
-
-
-function scan(valid, ores)
-    local checked_left  = false
-    local checked_right = false
-    
-    local f = str_xyz(getblock.forward())
-    local u = str_xyz(getblock.up())
-    local d = str_xyz(getblock.down())
-    local l = str_xyz(getblock.left())
-    local r = str_xyz(getblock.right())
-    local b = str_xyz(getblock.back())
-    
-    if not valid[f] and valid[f] ~= false then
-        valid[f] = detect_ore('forward')
-        ores[f] = valid[f]
-    end
-    if not valid[u] and valid[u] ~= false then
-        valid[u] = detect_ore('up')
-        ores[u] = valid[u]
-    end
-    if not valid[d] and valid[d] ~= false then
-        valid[d] = detect_ore('down')
-        ores[d] = valid[d]
-    end
-    if not valid[l] and valid[l] ~= false then
-        left()
-        checked_left = true
-        valid[l] = detect_ore('forward')
-        ores[l] = valid[l]
-    end
-    if not valid[r] and valid[r] ~= false then
-        right()
-        if checked_left then
-            right()
-        end
-        checked_right = true
-        valid[r] = detect_ore('forward')
-        ores[r] = valid[r]
-    end
-    if not valid[b] and valid[b] ~= false then
-        if checked_right then
-            right()
-        elseif checked_left then
-            left()
-        else
-            right(2)
-        end
-        valid[b] = detect_ore('forward')
-        ores[b] = valid[b]
-    end
-end
-
-
-function fastest_route(area, pos, fac, end_locations)
-    local queue = {}
-    local explored = {}
-    table.insert(queue,
-        {
-            coords = {x = pos.x, y = pos.y, z = pos.z},
-            facing = fac,
-            path = '',
-        }
-    )
-    explored[str_xyz(pos, fac)] = true
-
-    while #queue > 0 do
-        local node = table.remove(queue, 1)
-        if end_locations[str_xyz(node.coords)] or end_locations[str_xyz(node.coords, node.facing)] then
-            return node.path
-        end
-        for _, step in pairs({
-                {coords = node.coords,                                facing = left_shift[node.facing],  path = node.path .. 'l'},
-                {coords = node.coords,                                facing = right_shift[node.facing], path = node.path .. 'r'},
-                {coords = getblock.forward(node.coords, node.facing), facing = node.facing,              path = node.path .. 'f'},
-                {coords = getblock.up(node.coords, node.facing),      facing = node.facing,              path = node.path .. 'u'},
-                {coords = getblock.down(node.coords, node.facing),    facing = node.facing,              path = node.path .. 'd'},
-                }) do
-            explore_string = str_xyz(step.coords, step.facing)
-            if not explored[explore_string] and (not area or area[str_xyz(step.coords)]) then
-                explored[explore_string] = true
-                table.insert(queue, step)
-            end
-        end
-    end
-end
-
-
-function excavate_box(length, width, height)
-    length = length or 1
-    width = width or 1
-    height = height or 1
-
-    for h = 1, height do
-        for w = 1, width do
-            for l = 1, length - 1 do
-                if not safedig('forward') then return false end
-                if not forward() then return false end
-                if not clear_gravity_blocks() then return false end
-            end
-            if w < width then
-                local turn = (w % 2 == 1) and 'right' or 'left'
-                if not go(turn) then return false end
-                if not safedig('forward') then return false end
-                if not forward() then return false end
-                if not clear_gravity_blocks() then return false end
-                if not go(turn) then return false end
-            end
-        end
-        if h < height then
-            if not safedig('down') then return false end
-            if not down() then return false end
-            if not clear_gravity_blocks() then return false end
-            if width % 2 == 0 then
-                if not go('right') then return false end
-                if not go('right') then return false end
-            end
-        end
-    end
-    return true
-end
-
-
-function mine_vein(direction)
-    if not face(direction) then return false end
-    
-    -- Log starting location
-    local start = str_xyz({x = state.location.x, y = state.location.y, z = state.location.z}, state.orientation)
-
-    -- Begin block map
-    local valid = {}
-    local ores = {}
-    valid[str_xyz(state.location)] = true
-    valid[str_xyz(getblock.back(state.location, state.orientation))] = false
-    for i = 1, config.vein_max do
-
-        -- Scan adjacent
-        scan(valid, ores)
-
-        -- Search for nearest ore
-        local route = fastest_route(valid, state.location, state.orientation, ores)
-
-        -- Check if there is one
-        if not route then
-            break
-        end
-
-        -- Retrieve ore
-        turtle.select(1)
-        if not follow_route(route) then return false end
-        ores[str_xyz(state.location)] = nil
-
-    end
-
-    if not follow_route(fastest_route(valid, state.location, state.orientation, {[start] = true})) then return false end
-
-    if detect.up() then
-        safedig('up')
-    end
-    
-    return true
-end
-
-
-function clear_gravity_blocks()
-    for _, direction in pairs({'forward', 'up'}) do
-        while config.gravitynames[ ({inspect[direction]()})[2].name ] do
-            safedig(direction)
-            sleep(1)
-        end
-    end
-    return true
-end
-]===],
-    ["turtle_files/basics.lua"] = [===[inf = 1e309
-
-bumps = {
-    north = { 0,  0, -1},
-    south = { 0,  0,  1},
-    east  = { 1,  0,  0},
-    west  = {-1,  0,  0},
-}
-
-left_shift = {
-    north = 'west',
-    south = 'east',
-    east  = 'north',
-    west  = 'south',
-}
-
-right_shift = {
-    north = 'east',
-    south = 'west',
-    east  = 'south',
-    west  = 'north',
-}
-
-reverse_shift = {
-    north = 'south',
-    south = 'north',
-    east  = 'west',
-    west  = 'east',
-}
-
-function dprint(thing)
-    -- PRINT; IF TABLE PRINT EACH ITEM
-    if type(thing) == 'table' then
-        for k, v in pairs(thing) do
-            print(tostring(k) .. ': ' .. tostring(v))
-        end
-    else
-        print(thing)
-    end
-    return true
-end
-
-
-function str_xyz(coords, facing)
-    if facing then
-        return coords.x .. ',' .. coords.y .. ',' .. coords.z .. ':' .. facing
-    else
-        return coords.x .. ',' .. coords.y .. ',' .. coords.z
-    end
-end
-
-
-function distance(point_1, point_2)
-    return math.abs(point_1.x - point_2.x)
-         + math.abs(point_1.y - point_2.y)
-         + math.abs(point_1.z - point_2.z)
-end
-
-
-function in_area(xyz, area)
-    return xyz.x <= area.max_x and xyz.x >= area.min_x and xyz.y <= area.max_y and xyz.y >= area.min_y and xyz.z <= area.max_z and xyz.z >= area.min_z
-end
-
-
-function in_location(xyzo, location)
-    for _, axis in pairs({'x', 'y', 'z'}) do
-        if location[axis] then
-            if location[axis] ~= xyzo[axis] then
-                return false
-            end
-        end
-    end
-    return true
-end]===],
-    ["turtle_files/config.lua"] = [===[]===],
-    ["turtle_files/mastermine.lua"] = [===[function parse_requests()
-    -- PROCESS ALL REDNET REQUESTS
-    while #state.requests > 0 do
-        local request = table.remove(state.requests, 1)
-        sender, message, protocol = request[1], request[2], request[3]
-        if message.action == 'shutdown' then
-            os.shutdown()
-        elseif message.action == 'reboot' then
-            os.reboot()
-        elseif message.action == 'update' then
-            os.run({}, '/update')
-        elseif message.request_id == -1 or message.request_id == state.request_id then -- MAKE SURE REQUEST IS CURRENT
-            if state.initialized or message.action == 'initialize' then
-                print('Directive: ' .. message.action)
-                state.busy = true
-                state.success = actions[message.action](unpack(message.data)) -- EXECUTE DESIRED FUNCTION WITH DESIRED ARGUMENTS
-                state.busy = false
-                if not state.success then
-                    sleep(1)
-                end
-                state.request_id = state.request_id + 1
-            end
-        end
-    end
-end
-
-
-function main()
-    state.last_ping = os.clock()
-    while true do
-        parse_requests()
-        sleep(0.3)
-    end
-end
-
-
-main()]===],
-    ["turtle_files/receive.lua"] = [===[-- CONTINUOUSLY RECIEVE REDNET MESSAGES
-while true do
-    signal = {rednet.receive('mastermine')}
-    if signal[2].action == 'shutdown' then
-        os.shutdown()
-    elseif signal[2].action == 'reboot' then
-        os.reboot()
-    elseif signal[2].action == 'update' then
-        os.run({}, '/update')
-    else
-        table.insert(state.requests, signal)
-    end
-end]===],
-    ["turtle_files/report.lua"] = [===[-- CONTINUOUSLY BROADCAST STATUS REPORTS
-hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
-
-while true do
-
-    state.item_count = 0
-    state.empty_slot_count = 16
-    for slot = 1, 16 do
-        slot_item_count = turtle.getItemCount(slot)
-        if slot_item_count > 0 then
-            state.empty_slot_count = state.empty_slot_count - 1
-            state.item_count = state.item_count + slot_item_count
-        end
-    end
-    
-    rednet.send(hub_id, {
-            session_id       = state.session_id,
-            request_id       = state.request_id,
-            turtle_type      = state.type,
-            peripheral_left  = state.peripheral_left,
-            peripheral_right = state.peripheral_right,
-            updated_not_home = state.updated_not_home,
-            location         = state.location,
-            orientation      = state.orientation,
-            fuel_level       = turtle.getFuelLevel(),
-            item_count       = state.item_count,
-            empty_slot_count = state.empty_slot_count,
-            distance         = state.distance,
-            strip            = state.strip,
-            success          = state.success,
-            busy             = state.busy,
-        }, 'turtle_report')
-    
-    sleep(0.5)
-    
-end]===],
-    ["turtle_files/startup.lua"] = [===[-- SET LABEL
-os.setComputerLabel('Turtle ' .. os.getComputerID())
-
--- INITIALIZE APIS
-if fs.exists('/apis') then
-    fs.delete('/apis')
-end
-fs.makeDir('/apis')
-fs.copy('/config.lua', '/apis/config')
-fs.copy('/state.lua', '/apis/state')
-fs.copy('/basics.lua', '/apis/basics')
-fs.copy('/actions.lua', '/apis/actions')
-os.loadAPI('/apis/config')
-os.loadAPI('/apis/state')
-os.loadAPI('/apis/basics')
-os.loadAPI('/apis/actions')
-
-
--- OPEN REDNET
-for _, side in pairs({'back', 'top', 'left', 'right'}) do
-    if peripheral.getType(side) == 'modem' then
-        rednet.open(side)
-        break
-    end
-end
-
-
--- IF UPDATED PRINT "UPDATED"
-if fs.exists('/updated') then
-    fs.delete('/updated')
-    print('UPDATED')
-    state.updated_not_home = true
-end
-
-
--- LAUNCH PROGRAMS AS SEPARATE THREADS
-multishell.launch({}, '/report.lua')
-multishell.launch({}, '/receive.lua')
-multishell.launch({}, '/mastermine.lua')
-multishell.setTitle(2, 'report')
-multishell.setTitle(3, 'receive')
-multishell.setTitle(4, 'mastermine')]===],
-    ["turtle_files/state.lua"] = [===[request_id = 1
-requests = {}
-busy = false]===],
-    ["turtle_files/update"] = [===[hub_id = tonumber(fs.open('/hub_id', 'r').readAll())
-
-print('Sending update request...')
-rednet.send(hub_id, '/disk/turtle_files/', 'update_request')
-local sender, message, protocal = rednet.receive('update_package')
-
-for _, file_name in pairs(fs.list('/')) do
-    if file_name ~= 'rom' and file_name ~= 'persistent' then
-        fs.delete(file_name)
-    end
-end
-
-for file_name, file_contents in pairs(message) do
-    file = fs.open(file_name, 'w')
-    file.write(file_contents)
-    file.close()
-end
-
-os.reboot()]===],
-    ["turtle_files/updated"] = [===[]===],
-    ["turtle.lua"] = [===[hub_id = ...
-
-for _, filename in pairs(fs.list('/')) do
-    if filename ~= 'rom' and filename ~= 'disk' and filename ~= 'openp' and filename ~= 'ppp' and filename ~= 'persistent' then
-        fs.delete(filename)
-    end
-end
-
-for _, filename in pairs(fs.list('/disk/turtle_files')) do
-    fs.copy('/disk/turtle_files/' .. filename, '/' .. filename)
-end
-
-if not tonumber(hub_id) then
-    print("Enter ID of Hub computer to link to: ")
-    hub_id = tonumber(read())
-    if hub_id == nil then
-        error("Invalid ID")
-    end
-end
-
-file = fs.open('/hub_id', 'w')
-file.write(hub_id)
-file.close()
-
-print("Linked")
-
-sleep(1)
-os.reboot()
-]===]
-}
-
-local function ensure_dir_for(file_path)
-    local parent = fs.getDir(file_path)
-    if parent ~= "" and not fs.exists(parent) then
-        fs.makeDir(parent)
-    end
-end
 
 for k, v in pairs(files) do
-    local target = fs.combine(path, k)
-    ensure_dir_for(target)
-    local file = fs.open(target, "w")
+    local file = fs.open(fs.combine(path, k), 'w')
     file.write(v)
     file.close()
 end
