@@ -3,55 +3,78 @@
 
 local baseUrl = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAndComputers/refs/heads/main/programs/perlytiara/"
 
--- Predefined programs to update
+-- Predefined programs to update - organized by folders
 local programs = {
     -- eHydra Management System
-    {url = baseUrl .. "eHydra/autoupdater.lua", name = "ehydra-autoupdater"},
-    {url = baseUrl .. "eHydra/batch_updater.lua", name = "ehydra-batch-updater"},
-    {url = baseUrl .. "eHydra/init.lua", name = "ehydra-init"},
-    {url = baseUrl .. "eHydra/turtle_deployer.lua", name = "ehydra-deployer"},
-    {url = baseUrl .. "eHydra/startup.lua", name = "ehydra-startup"},
-    {url = baseUrl .. "eHydra/self_update.lua", name = "ehydra-self-update"},
-    {url = baseUrl .. "eHydra/restore_backups.lua", name = "ehydra-restore"},
+    {url = baseUrl .. "eHydra/autoupdater.lua", folder = "eHydra", name = "autoupdater"},
+    {url = baseUrl .. "eHydra/batch_updater.lua", folder = "eHydra", name = "batch_updater"},
+    {url = baseUrl .. "eHydra/init.lua", folder = "eHydra", name = "init"},
+    {url = baseUrl .. "eHydra/turtle_deployer.lua", folder = "eHydra", name = "turtle_deployer"},
+    {url = baseUrl .. "eHydra/startup.lua", folder = "eHydra", name = "startup"},
+    {url = baseUrl .. "eHydra/self_update.lua", folder = "eHydra", name = "self_update"},
+    {url = baseUrl .. "eHydra/restore_backups.lua", folder = "eHydra", name = "restore_backups"},
+    {url = baseUrl .. "eHydra/turtle_client.lua", folder = "eHydra", name = "turtle_client"},
+    {url = baseUrl .. "eHydra/mining_setup.lua", folder = "eHydra", name = "mining_setup"},
+    {url = baseUrl .. "eHydra/launcher.lua", folder = "eHydra", name = "launcher"},
     
     -- Stairs programs
-    {url = baseUrl .. "stairs/multi.lua", name = "stairs-multi"},
-    {url = baseUrl .. "stairs/client.lua", name = "stairs-client"},
-    {url = baseUrl .. "stairs/stairs.lua", name = "stairs"},
-    {url = baseUrl .. "stairs/download.lua", name = "stairs-download"},
-    {url = baseUrl .. "stairs/startup.lua", name = "stairs-startup"},
+    {url = baseUrl .. "stairs/multi.lua", folder = "stairs", name = "multi"},
+    {url = baseUrl .. "stairs/client.lua", folder = "stairs", name = "client"},
+    {url = baseUrl .. "stairs/stairs.lua", folder = "stairs", name = "stairs"},
+    {url = baseUrl .. "stairs/download.lua", folder = "stairs", name = "download"},
+    {url = baseUrl .. "stairs/startup.lua", folder = "stairs", name = "startup"},
     
     -- Mining programs
-    {url = baseUrl .. "tClear/tClear.lua", name = "tclear"},
-    {url = baseUrl .. "tClear/tClearChunky.lua", name = "tclear-chunky"},
-    {url = baseUrl .. "tClear/AdvancedMiningTurtle.lua", name = "advanced-mining"},
-    {url = baseUrl .. "tClear/AdvancedChunkyTurtle.lua", name = "advanced-chunky"},
-    {url = baseUrl .. "quarry/quarry.lua", name = "quarry"},
-    {url = baseUrl .. "quarry/quarry_multi.lua", name = "quarry-multi"},
+    {url = baseUrl .. "tClear/tClear.lua", folder = "tClear", name = "tClear"},
+    {url = baseUrl .. "tClear/tClearChunky.lua", folder = "tClear", name = "tClearChunky"},
+    {url = baseUrl .. "tClear/AdvancedMiningTurtle.lua", folder = "tClear", name = "AdvancedMiningTurtle"},
+    {url = baseUrl .. "tClear/AdvancedChunkyTurtle.lua", folder = "tClear", name = "AdvancedChunkyTurtle"},
     
-    -- Utility programs  
-    {url = baseUrl .. "gps/gps.lua", name = "gps"},
-    {url = baseUrl .. "gps/gps_host.lua", name = "gps-host"},
-    {url = baseUrl .. "EpicMiningTurtle/EpicMiningTurtle_remote.lua", name = "epic-mining"},
+    -- Quarry programs
+    {url = baseUrl .. "quarry/quarry.lua", folder = "quarry", name = "quarry"},
+    {url = baseUrl .. "quarry/quarry_multi.lua", folder = "quarry", name = "quarry_multi"},
     
-    -- Platform and building
-    {url = baseUrl .. "tPlatform/tPlatform_fixed.lua", name = "tplatform"},
-    {url = baseUrl .. "dome_tunnels/dome_tunnels.lua", name = "dome-tunnels"},
-    {url = baseUrl .. "room_carver.lua", name = "room-carver"},
-    {url = baseUrl .. "entrance_carver.lua", name = "entrance-carver"},
+    -- GPS programs
+    {url = baseUrl .. "gps/gps.lua", folder = "gps", name = "gps"},
+    {url = baseUrl .. "gps/gps_host.lua", folder = "gps", name = "gps_host"},
+    
+    -- Epic Mining programs
+    {url = baseUrl .. "EpicMiningTurtle/EpicMiningTurtle_remote.lua", folder = "EpicMiningTurtle", name = "EpicMiningTurtle_remote"},
+    
+    -- Platform and building programs
+    {url = baseUrl .. "tPlatform/tPlatform_fixed.lua", folder = "tPlatform", name = "tPlatform_fixed"},
+    {url = baseUrl .. "dome_tunnels/dome_tunnels.lua", folder = "dome_tunnels", name = "dome_tunnels"},
+    {url = baseUrl .. "room_carver.lua", folder = "building", name = "room_carver"},
+    {url = baseUrl .. "entrance_carver.lua", folder = "building", name = "entrance_carver"},
 }
 
+-- Function to ensure directory exists
+local function ensureDirectory(path)
+    if not fs.exists(path) then
+        fs.makeDir(path)
+        return true
+    end
+    return false
+end
+
 -- Ensure programs directory exists
-if not fs.exists("programs") then
-    fs.makeDir("programs")
-    print("📁 Created programs directory")
+ensureDirectory("programs")
+
+-- Count unique folders for display
+local folders = {}
+for _, program in ipairs(programs) do
+    folders[program.folder] = true
+end
+local folderCount = 0
+for _ in pairs(folders) do
+    folderCount = folderCount + 1
 end
 
 print("eHydra Batch Updater v2.0")
 print("=========================")
 print("Repository: " .. baseUrl)
-print("Programs to update: " .. #programs)
-print("📦 Includes: eHydra System + Turtle Programs")
+print("Programs to update: " .. #programs .. " across " .. folderCount .. " folders")
+print("📁 Organized by program categories")
 print()
 
 -- Ask for confirmation
@@ -70,10 +93,17 @@ local failed = 0
 local startTime = os.clock()
 
 for i, program in ipairs(programs) do
-    print("[" .. i .. "/" .. #programs .. "] " .. program.name .. "...")
+    local folderPath = "programs/" .. program.folder
+    local programPath = folderPath .. "/" .. program.name .. ".lua"
+    
+    print("[" .. i .. "/" .. #programs .. "] " .. program.folder .. "/" .. program.name .. "...")
+    
+    -- Ensure folder exists
+    if ensureDirectory(folderPath) then
+        print("  📁 Created folder: " .. program.folder)
+    end
     
     -- Delete existing file
-    local programPath = "programs/" .. program.name .. ".lua"
     if fs.exists(programPath) then
         fs.delete(programPath)
     end
@@ -90,7 +120,7 @@ for i, program in ipairs(programs) do
             if file then
                 file.write(content)
                 file.close()
-                print("  ✅ " .. program.name .. " - downloaded " .. #content .. " bytes")
+                print("  ✅ " .. program.folder .. "/" .. program.name .. " - downloaded " .. #content .. " bytes")
                 success = success + 1
             else
                 print("  ❌ " .. program.name .. " - failed to write file")
@@ -118,14 +148,35 @@ print("========================")
 print("✅ Successfully updated: " .. success .. " programs")
 print("❌ Failed updates: " .. failed .. " programs") 
 print("⏱️  Total time: " .. string.format("%.1f", duration) .. " seconds")
-print("📁 Programs saved to: programs/ directory")
+print("📁 Programs organized in: programs/<folder>/<program>.lua")
 
 if success > 0 then
     print()
     print("🎉 Updated programs are ready to use!")
-    print("   📂 eHydra programs: ehydra-* prefix")
-    print("   🐢 Turtle programs: direct names")
-    print("   💡 Example: ehydra-startup, quarry, stairs-multi")
+    print("   📁 Program structure:")
+    
+    -- Show folder organization
+    local folderList = {}
+    for folder in pairs(folders) do
+        table.insert(folderList, folder)
+    end
+    table.sort(folderList)
+    
+    for _, folder in ipairs(folderList) do
+        print("      programs/" .. folder .. "/")
+        -- Show programs in this folder
+        for _, program in ipairs(programs) do
+            if program.folder == folder then
+                print("         " .. program.name .. ".lua")
+            end
+        end
+    end
+    
+    print()
+    print("   💡 Usage examples:")
+    print("      programs/eHydra/startup.lua")
+    print("      programs/quarry/quarry.lua")
+    print("      programs/stairs/multi.lua")
 end
 
 if failed > 0 then
@@ -138,5 +189,5 @@ if failed > 0 then
 end
 
 print()
-print("🔄 Note: eHydra system has been updated!")
-print("   Use 'ehydra-startup' to access the main menu")
+print("🔄 All programs organized by category!")
+print("   Navigate to programs/<folder>/ to find specific programs")
