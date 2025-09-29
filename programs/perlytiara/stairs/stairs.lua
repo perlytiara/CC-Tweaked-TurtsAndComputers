@@ -1,5 +1,6 @@
--- stairs.lua - Fast stair builder
--- Usage: stairs [height] [up/down] [steps] [place]
+-- stairs.lua - Fast stair builder  
+-- Usage: stairs [headroom] [up/down] [length] [place]
+-- headroom = blocks above each step, length = total steps to build
 
 local args = {...}
 
@@ -35,13 +36,41 @@ local function gd()
   end
 end
 
--- Smart block placement - use any non-fuel items
+-- Resource scanning and management
+local function scanInventory()
+  local fuel = 0
+  local blocks = 0
+  local fuelSlots = {}
+  local blockSlots = {}
+  
+  for i = 1, 16 do
+    local count = turtle.getItemCount(i)
+    if count > 0 then
+      turtle.select(i)
+      local isFuel = turtle.refuel(0)
+      if isFuel then
+        fuel = fuel + count
+        table.insert(fuelSlots, i)
+      else
+        blocks = blocks + count
+        table.insert(blockSlots, i)
+      end
+    end
+  end
+  
+  return {
+    fuel = fuel,
+    blocks = blocks,
+    fuelSlots = fuelSlots,
+    blockSlots = blockSlots
+  }
+end
+
 local function findBlockSlot()
   for i = 1, 16 do
     local count = turtle.getItemCount(i)
     if count > 0 then
       turtle.select(i)
-      -- Test if it's fuel by trying to refuel 0 items
       local isFuel = turtle.refuel(0)
       if not isFuel then return i end
     end
@@ -108,73 +137,117 @@ local function clearDown(h)
 end
 
 -- Parse arguments
-local height = 3
+local headroom = 3  -- blocks above each step
 local goUp = true
-local steps = nil
+local length = nil  -- number of steps to build
 local autoPlace = false
-local surface = true
+local autoLength = false  -- use surface detection for up, or blocks available
 
 if #args >= 1 then
-  height = math.max(1, tonumber(args[1]) or 3)
+  headroom = math.max(1, tonumber(args[1]) or 3)
   for i = 2, #args do
     local arg = string.lower(args[i])
     local num = tonumber(args[i])
     if num then
-      steps = math.max(1, num)
-      surface = false
+      length = math.max(1, num)
+      autoLength = false
     elseif arg == "down" then
       goUp = false
-      surface = false
     elseif arg == "up" then
       goUp = true
     elseif arg == "place" then
       autoPlace = true
+    elseif arg == "auto" then
+      autoLength = true
     end
   end
 else
-  -- Simple prompts
+  -- Interactive prompts
   term.clear()
   term.setCursorPos(1, 1)
   print("Stair Builder")
-  write("Height [3]: ")
+  
+  -- Scan resources first
+  local resources = scanInventory()
+  print("Resources: " .. resources.fuel .. " fuel, " .. resources.blocks .. " blocks")
+  
+  write("Headroom (blocks above steps) [3]: ")
   local h = read()
-  if h ~= "" then height = math.max(1, tonumber(h) or 3) end
+  if h ~= "" then headroom = math.max(1, tonumber(h) or 3) end
   
   write("Direction (u/d) [u]: ")
   local dir = string.lower(read())
-  if dir == "d" or dir == "down" then
-    goUp = false
-    surface = false
-  end
+  goUp = not (dir == "d" or dir == "down")
   
+  -- Length options
+  local maxSteps = math.floor(resources.blocks / (autoPlace and 1 or 0.1)) -- rough estimate
   if goUp then
-    write("To surface? (y/n) [y]: ")
-    local surf = string.lower(read())
-    surface = not (surf == "n" or surf == "no")
-  end
-  
-  if not surface then
-    write("Steps [32]: ")
+    write("Length - steps/surface/auto [surface]: ")
+    local lengthInput = string.lower(read())
+    if lengthInput == "surface" or lengthInput == "" then
+      autoLength = true
+      length = nil
+    elseif lengthInput == "auto" then
+      autoLength = true
+      length = maxSteps
+    else
+      local num = tonumber(lengthInput)
+      if num then
+        length = math.max(1, num)
+        autoLength = false
+      else
+        autoLength = true
+      end
+    end
+  else
+    write("Depth (steps down) [32]: ")
     local s = read()
-    steps = math.max(1, tonumber(s) or 32)
+    length = math.max(1, tonumber(s) or 32)
+    autoLength = false
   end
   
-  write("Place blocks? (y/n) [n]: ")
+  write("Place floor blocks? (y/n) [n]: ")
   local place = string.lower(read())
   autoPlace = (place == "y" or place == "yes")
 end
 
--- Main loop
-print("Building " .. (goUp and "up" or "down") .. " stairs, height=" .. height)
-if surface then
-  print("Mode: to surface")
+-- Set defaults if not specified
+if not length and not autoLength then
+  if goUp then
+    autoLength = true  -- surface detection for up
+  else
+    length = 32  -- default depth for down
+  end
+end
+
+-- Resource check and planning
+local resources = scanInventory()
+print("Building " .. (goUp and "up" or "down") .. " stairs")
+print("Headroom: " .. headroom .. " blocks above each step")
+
+if autoLength and goUp then
+  print("Mode: to surface (auto-detect)")
+elseif autoLength then
+  print("Length: auto (max " .. math.floor(resources.blocks / (autoPlace and 1 or 0.1)) .. " steps)")
 else
-  print("Steps: " .. steps)
+  print("Length: " .. (length or "unknown") .. " steps")
+end
+
+print("Resources: " .. resources.fuel .. " fuel, " .. resources.blocks .. " blocks")
+
+-- Estimate what we can build
+local blocksPerStep = autoPlace and 1 or 0
+local maxPossibleSteps = blocksPerStep > 0 and math.floor(resources.blocks / blocksPerStep) or 999
+if autoPlace and maxPossibleSteps < (length or 32) then
+  print("Warning: Only enough blocks for " .. maxPossibleSteps .. " steps with floor placement")
 end
 
 -- Initial fuel check
-local fuelNeeded = (steps or 64) * 3
-refuel(math.min(fuelNeeded, 200))
+local fuelNeeded = (length or 64) * 3
+if resources.fuel * 80 < fuelNeeded then  -- rough fuel value estimate
+  print("Warning: May need more fuel")
+end
+refuel(math.min(fuelNeeded, turtle.getFuelLevel() + 100))
 
 local step = 0
 local openStreak = 0
@@ -191,25 +264,35 @@ while true do
   if goUp then
     df(); gf()
     if autoPlace then placeFloor() end
-    clearUp(height)
+    clearUp(headroom)
   else
     df(); gf(); dd(); gd()
     if autoPlace then placeFloor() end
-    clearDown(height)
+    clearDown(headroom)
   end
   
   -- Exit conditions
-  if not surface and step >= (steps or 32) then
+  if not autoLength and step >= (length or 32) then
     break
   end
   
-  if surface and goUp then
+  -- Surface detection for up stairs
+  if autoLength and goUp then
     if not turtle.detect() and not turtle.detectUp() then
       openStreak = openStreak + 1
     else
       openStreak = 0
     end
     if openStreak >= 5 then break end
+  end
+  
+  -- Block limit check
+  if autoPlace then
+    local currentResources = scanInventory()
+    if currentResources.blocks <= 0 then
+      print("Out of blocks!")
+      break
+    end
   end
   
   if step >= 1000 then

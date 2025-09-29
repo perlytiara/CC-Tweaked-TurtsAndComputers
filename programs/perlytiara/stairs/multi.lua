@@ -25,25 +25,38 @@ if #ids == 0 then
   return
 end
 
-write("Height [3]: ")
-local height = tonumber(read()) or 3
+write("Headroom (blocks above steps) [3]: ")
+local headroom = tonumber(read()) or 3
 
 write("Direction (u/d) [u]: ")
 local dir = string.lower(read())
 if dir == "d" then dir = "down" else dir = "up" end
 
-local steps = ""
+local length = ""
 if dir == "down" then
-  write("Steps [32]: ")
-  steps = tostring(tonumber(read()) or 32)
+  write("Depth (steps down) [32]: ")
+  length = tostring(tonumber(read()) or 32)
+else
+  write("Length - steps/surface/auto [surface]: ")
+  local lengthInput = string.lower(read())
+  if lengthInput ~= "" and lengthInput ~= "surface" then
+    if lengthInput == "auto" then
+      length = "auto"
+    else
+      local num = tonumber(lengthInput)
+      if num then
+        length = tostring(num)
+      end
+    end
+  end
 end
 
-write("Place blocks? (y/n) [n]: ")
+write("Place floor blocks? (y/n) [n]: ")
 local place = string.lower(read()) == "y" and "place" or ""
 
 -- Build command
-local cmd = tostring(height) .. " " .. dir
-if steps ~= "" then cmd = cmd .. " " .. steps end
+local cmd = tostring(headroom) .. " " .. dir
+if length ~= "" then cmd = cmd .. " " .. length end
 if place ~= "" then cmd = cmd .. " " .. place end
 
 -- Send to turtles
