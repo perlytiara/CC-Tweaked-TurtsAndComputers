@@ -5,18 +5,24 @@
 local args = {...}
 
 if #args < 2 then
-    print("Usage: autoupdater <github_raw_url> <local_filename>")
-    print("Example: autoupdater https://raw.githubusercontent.com/user/repo/main/file.lua my-program")
+    print("Usage: autoupdater <github_raw_url> <local_filename> [folder]")
+    print("Example: autoupdater https://raw.githubusercontent.com/user/repo/main/file.lua my-program eHydra")
+    print("Example: autoupdater https://raw.githubusercontent.com/user/repo/main/file.lua quarry quarry")
     return
 end
 
 local url = args[1]
 local filename = args[2]
-local programsPath = "programs/" .. filename .. ".lua"
+local folder = args[3] or "eHydra" -- Default to eHydra folder if not specified
+local fileExtension = filename == "README" and ".md" or ".lua"
+local programsPath = "programs/" .. folder .. "/" .. filename .. fileExtension
 
--- Ensure programs directory exists
+-- Ensure programs directory and folder exist
 if not fs.exists("programs") then
     fs.makeDir("programs")
+end
+if not fs.exists("programs/" .. folder) then
+    fs.makeDir("programs/" .. folder)
 end
 
 print("eHydra Auto-Updater v1.0")

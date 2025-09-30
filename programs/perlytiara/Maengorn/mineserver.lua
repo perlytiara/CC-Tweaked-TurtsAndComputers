@@ -16,7 +16,19 @@ else
 end
 
 
-local modem = peripheral.wrap("right")
+-- Auto-detect modem on either side
+local modem
+for _, side in ipairs({"left", "right", "front", "back", "top", "bottom"}) do
+    if peripheral.getType(side) == "modem" then
+        modem = peripheral.wrap(side)
+        break
+    end
+end
+
+if not modem then
+    error("No modem found on any side")
+end
+
 modem.open(SERVER_PORT)
 
 local target = vector.new()

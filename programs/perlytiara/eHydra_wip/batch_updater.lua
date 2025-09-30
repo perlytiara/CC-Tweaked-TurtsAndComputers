@@ -5,7 +5,7 @@ local baseUrl = "https://raw.githubusercontent.com/perlytiara/CC-Tweaked-TurtsAn
 
 -- Predefined programs to update - organized by folders
 local programs = {
-    -- eHydra Management System
+    -- eHydra Management System (ALL FILES)
     {url = baseUrl .. "eHydra/autoupdater.lua", folder = "eHydra", name = "autoupdater"},
     {url = baseUrl .. "eHydra/batch_updater.lua", folder = "eHydra", name = "batch_updater"},
     {url = baseUrl .. "eHydra/init.lua", folder = "eHydra", name = "init"},
@@ -16,6 +16,7 @@ local programs = {
     {url = baseUrl .. "eHydra/turtle_client.lua", folder = "eHydra", name = "turtle_client"},
     {url = baseUrl .. "eHydra/mining_setup.lua", folder = "eHydra", name = "mining_setup"},
     {url = baseUrl .. "eHydra/launcher.lua", folder = "eHydra", name = "launcher"},
+    {url = baseUrl .. "eHydra/README.md", folder = "eHydra", name = "README"},
     
     -- Stairs programs
     {url = baseUrl .. "stairs/multi.lua", folder = "stairs", name = "multi"},
@@ -94,9 +95,10 @@ local startTime = os.clock()
 
 for i, program in ipairs(programs) do
     local folderPath = "programs/" .. program.folder
-    local programPath = folderPath .. "/" .. program.name .. ".lua"
+    local fileExtension = program.name == "README" and ".md" or ".lua"
+    local programPath = folderPath .. "/" .. program.name .. fileExtension
     
-    print("[" .. i .. "/" .. #programs .. "] " .. program.folder .. "/" .. program.name .. "...")
+    print("[" .. i .. "/" .. #programs .. "] " .. program.folder .. "/" .. program.name .. fileExtension .. "...")
     
     -- Ensure folder exists
     if ensureDirectory(folderPath) then
@@ -120,7 +122,7 @@ for i, program in ipairs(programs) do
             if file then
                 file.write(content)
                 file.close()
-                print("  ✅ " .. program.folder .. "/" .. program.name .. " - downloaded " .. #content .. " bytes")
+                print("  ✅ " .. program.folder .. "/" .. program.name .. fileExtension .. " - downloaded " .. #content .. " bytes")
                 success = success + 1
             else
                 print("  ❌ " .. program.name .. " - failed to write file")

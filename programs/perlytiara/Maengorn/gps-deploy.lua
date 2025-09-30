@@ -85,8 +85,20 @@
 -- to make sure the user entered values isn't > 254
 height = 255
 
--- need to enable rednet first incase using locate
-rednet.open( "right" )
+-- Auto-detect modem and enable rednet
+local modemSide
+for _, side in ipairs({"left", "right", "front", "back", "top", "bottom"}) do
+    if peripheral.getType(side) == "modem" then
+        modemSide = side
+        break
+    end
+end
+
+if not modemSide then
+    error("No modem found on any side")
+end
+
+rednet.open(modemSide)
 
 local function printUsage()
 	print("")
