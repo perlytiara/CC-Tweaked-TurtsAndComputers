@@ -58,25 +58,44 @@ function parseParams(data)
 end
 
 function getItemIndex(itemName)
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
-            if(item["name"] == itemName) then
+    -- Scan all available inventory slots (turtles can have more than 16 slots)
+    for slot = 1, 64, 1 do  -- Check up to 64 slots to be safe
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
+            if item["name"] == itemName then
                 return slot
             end
         end
     end
+    return nil
 end
 
 function getFloppyDiskIndex()
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
-            if(item["name"] == "computercraft:floppy_disk" or item["name"] == "computercraft:disk") then
+    -- Scan all available inventory slots for floppy disks
+    for slot = 1, 64, 1 do  -- Check up to 64 slots to be safe
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
+            local name = item["name"]
+            if name == "computercraft:floppy_disk" or 
+               name == "computercraft:disk" or 
+               name:match("floppy") or 
+               name:match("disk") then
                 return slot
             end
         end
     end
+    return nil
+end
+
+function debugInventory()
+    print("=== INVENTORY SCAN ===")
+    for slot = 1, 64, 1 do
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
+            print(string.format("Slot %d: %s (count: %d)", slot, item.name, item.count))
+        end
+    end
+    print("=== END SCAN ===")
 end
 
 function checkFuel()
@@ -108,6 +127,7 @@ function createDeploymentDisk()
     local diskSlot = getItemIndex("computercraft:disk_drive")
     if not diskSlot then
         print("No disk drive found in inventory!")
+        debugInventory()  -- Show what's actually in the inventory
         return false
     end
     

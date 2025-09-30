@@ -48,10 +48,14 @@ function checkFuel()
     
     if(turtle.getFuelLevel() < 50) then
         print("Attempting Refuel...")
-        for slot = 1, SLOT_COUNT, 1 do
-            turtle.select(slot)
-            if(turtle.refuel()) then
-                return true
+        -- Scan all inventory slots for fuel
+        for slot = 1, 64, 1 do
+            local success, item = pcall(turtle.getItemDetail, slot)
+            if success and item ~= nil then
+                turtle.select(slot)
+                if(turtle.refuel()) then
+                    return true
+                end
             end
         end
 
@@ -265,9 +269,10 @@ DROPPED_ITEMS = {
 }
 function dropItems()
     print("Purging Inventory...")
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
+    -- Scan all inventory slots for items to drop
+    for slot = 1, 64, 1 do
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
             for filterIndex = 1, #DROPPED_ITEMS, 1 do
                 if(item["name"] == DROPPED_ITEMS[filterIndex]) then
                     print("Dropping - " .. item["name"])
@@ -281,9 +286,10 @@ end
 
 
 function getEnderIndex()
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
+    -- Scan all inventory slots for ender chest
+    for slot = 1, 64, 1 do
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
             if(item["name"] == "enderstorage:ender_storage") then
                 return slot
             end
@@ -301,9 +307,9 @@ function manageInventory()
         turtle.placeUp()  
     end
     -- Chest is now deployed
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
+    for slot = 1, 64, 1 do
+        local success, item = pcall(turtle.getItemDetail, slot)
+        if success and item ~= nil then
             if(item["name"] ~= "minecraft:coal_block" and item["name"] ~= "minecraft:coal" and item["name"] ~= "minecraft:charcoal") then
                 turtle.select(slot)
                 turtle.dropUp()
