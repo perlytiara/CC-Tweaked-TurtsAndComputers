@@ -13,6 +13,7 @@ local startOption = 1
 local optionsPerPage = 5
 local installPath = "programs/perlytiara/Maengorn/"
 local useExtension = true
+local settingsFile = ".maengorn_settings"
 
 -- Colors for better UI
 local colors = {
@@ -65,6 +66,34 @@ local PROGRAM_CONFIGS = {
 }
 
 -- Utility functions
+function loadSettings()
+    if fs.exists(settingsFile) then
+        local file = fs.open(settingsFile, "r")
+        if file then
+            local content = file.readAll()
+            file.close()
+            
+            -- Parse settings from file
+            for line in content:gmatch("[^\r\n]+") do
+                if line:match("^installPath=") then
+                    installPath = line:match("installPath=(.+)")
+                elseif line:match("^useExtension=") then
+                    useExtension = line:match("useExtension=(.+)") == "true"
+                end
+            end
+        end
+    end
+end
+
+function saveSettings()
+    local file = fs.open(settingsFile, "w")
+    if file then
+        file.write("installPath=" .. installPath .. "\n")
+        file.write("useExtension=" .. tostring(useExtension) .. "\n")
+        file.close()
+    end
+end
+
 function detectTurtleType()
     -- Check if we have a disk drive (disk drive turtles have disk access)
     if fs.exists("disk/") then
@@ -385,11 +414,31 @@ function showSettings()
         write("Current: " .. turtleType)
         
         local y = 11
-        highlightOption(1, "Change Install Path", y)
+        if settingsSelected == 1 then
+            highlightOption(1, "Change Install Path", y)
+        else
+            term.setTextColor(colors.blue)
+            term.setCursorPos(2, y)
+            write("Change Install Path")
+        end
         y = y + 1
-        highlightOption(2, "Toggle .lua Extension", y)
+        
+        if settingsSelected == 2 then
+            highlightOption(2, "Toggle .lua Extension", y)
+        else
+            term.setTextColor(colors.blue)
+            term.setCursorPos(2, y)
+            write("Toggle .lua Extension")
+        end
         y = y + 1
-        highlightOption(3, "Back to Menu", y)
+        
+        if settingsSelected == 3 then
+            highlightOption(3, "Back to Menu", y)
+        else
+            term.setTextColor(colors.blue)
+            term.setCursorPos(2, y)
+            write("Back to Menu")
+        end
         
         term.setTextColor(colors.gray)
         term.setCursorPos(1, h)
@@ -426,9 +475,11 @@ function showSettings()
                     if not installPath:match("/$") then
                         installPath = installPath .. "/"
                     end
+                    saveSettings()
                 end
             elseif settingsSelected == 2 then
                 useExtension = not useExtension
+                saveSettings()
             elseif settingsSelected == 3 then
                 return
             end
@@ -437,6 +488,9 @@ function showSettings()
 end
 
 function main()
+    -- Load saved settings
+    loadSettings()
+    
     -- Detect turtle type
     turtleType = detectTurtleType()
     
