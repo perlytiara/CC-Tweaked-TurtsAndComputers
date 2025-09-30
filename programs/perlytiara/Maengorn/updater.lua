@@ -11,6 +11,8 @@ local selectedOption = 1
 local maxOptions = 5
 local startOption = 1
 local optionsPerPage = 5
+local installPath = "programs/perlytiara/Maengorn/"
+local useExtension = true
 
 -- Colors for better UI
 local colors = {
@@ -31,33 +33,33 @@ local PROGRAMS_FOLDER = "programs/perlytiara/Maengorn/"
 -- Program definitions by turtle type
 local PROGRAM_CONFIGS = {
     disk_drive = {
-        name = "Disk Drive Turtle",
+        name = "Disk Drive",
         programs = {
-            {file = "startup.lua", description = "Startup script for disk deployment"},
-            {file = "clientdig.lua", description = "Client mining program"}
+            {name = "startup", file = "startup.lua", description = "Startup script"},
+            {name = "clientdig", file = "clientdig.lua", description = "Client mining"}
         }
     },
     phone = {
         name = "Phone Turtle", 
         programs = {
-            {file = "phone_server.lua", description = "Phone server communication"}
+            {name = "phone_server", file = "phone_server.lua", description = "Phone server"}
         }
     },
     master = {
         name = "Master Turtle",
         programs = {
-            {file = "mineserver.lua", description = "Mining server coordinator"}
+            {name = "mineserver", file = "mineserver.lua", description = "Mining server"}
         }
     },
     all = {
         name = "All Programs",
         programs = {
-            {file = "startup.lua", description = "Startup script for disk deployment"},
-            {file = "clientdig.lua", description = "Client mining program"},
-            {file = "phone_server.lua", description = "Phone server communication"},
-            {file = "mineserver.lua", description = "Mining server coordinator"},
-            {file = "gps-deploy.lua", description = "GPS deployment system"},
-            {file = "updater.lua", description = "This updater program"}
+            {name = "startup", file = "startup.lua", description = "Startup script"},
+            {name = "clientdig", file = "clientdig.lua", description = "Client mining"},
+            {name = "phone_server", file = "phone_server.lua", description = "Phone server"},
+            {name = "mineserver", file = "mineserver.lua", description = "Mining server"},
+            {name = "gps-deploy", file = "gps-deploy.lua", description = "GPS deployment"},
+            {name = "updater", file = "updater.lua", description = "This updater"}
         }
     }
 }
@@ -97,9 +99,9 @@ end
 
 function drawHeader()
     term.setTextColor(colors.blue)
-    centerText("=====================================", 1)
-    centerText("       MAENGORN UPDATER v1.0       ", 2)
-    centerText("=====================================", 3)
+    centerText("===================", 1)
+    centerText(" MAENGORN UPDATER ", 2)
+    centerText("===================", 3)
     term.setTextColor(colors.white)
 end
 
@@ -107,13 +109,7 @@ function drawFooter()
     local y = h
     term.setTextColor(colors.gray)
     term.setCursorPos(1, y)
-    write("Up/Down Navigate | Enter Select | Q Quit")
-    
-    if totalPages > 1 then
-        local pageText = string.format("Page %d/%d", currentPage, totalPages)
-        term.setCursorPos(w - string.len(pageText), y)
-        write(pageText)
-    end
+    write("Arrows:Navigate | Enter:Select | Q:Quit")
 end
 
 function highlightOption(optionNum, text, y)
@@ -179,34 +175,45 @@ function displayText(text, startY)
     end
 end
 
-function downloadProgram(filename, description)
-    local url = REPO_BASE .. filename
-    local localPath = PROGRAMS_FOLDER .. filename
+function downloadProgram(programInfo, description)
+    local url = REPO_BASE .. programInfo.file
+    local finalPath = installPath .. programInfo.name
+    if useExtension then
+        finalPath = finalPath .. ".lua"
+    end
     
-    -- Ensure programs folder exists
-    if not fs.exists("programs") then
-        fs.makeDir("programs")
+    -- Ensure install folder exists
+    local pathParts = {}
+    for part in installPath:gmatch("[^/]+") do
+        table.insert(pathParts, part)
     end
-    if not fs.exists("programs/perlytiara") then
-        fs.makeDir("programs/perlytiara")
+    
+    local currentPath = ""
+    for _, part in ipairs(pathParts) do
+        currentPath = currentPath .. part .. "/"
+        if not fs.exists(currentPath) then
+            fs.makeDir(currentPath)
+        end
     end
-    if not fs.exists(PROGRAMS_FOLDER) then
-        fs.makeDir(PROGRAMS_FOLDER)
+    
+    -- Remove old file if it exists
+    if fs.exists(finalPath) then
+        fs.delete(finalPath)
     end
     
     clearScreen()
     drawHeader()
     
     term.setTextColor(colors.yellow)
-    centerText("Downloading: " .. filename, 5)
+    centerText("Downloading: " .. programInfo.name, 5)
     term.setTextColor(colors.white)
     
     term.setCursorPos(2, 7)
-    write("URL: " .. url)
+    write("From: " .. url)
     term.setCursorPos(2, 8)
-    write("Local: " .. localPath)
+    write("To: " .. finalPath)
     term.setCursorPos(2, 9)
-    write("Description: " .. description)
+    write("Desc: " .. description)
     
     term.setTextColor(colors.blue)
     term.setCursorPos(2, 11)
@@ -214,24 +221,24 @@ function downloadProgram(filename, description)
     
     -- Download the file
     local success, errorMsg = pcall(function()
-        shell.run("wget", url, localPath)
+        shell.run("wget", url, finalPath)
     end)
     
     if success then
         term.setTextColor(colors.green)
         term.setCursorPos(2, 11)
-        write("Status: ✓ Download successful!")
+        write("Status: Success!")
     else
         term.setTextColor(colors.red)
         term.setCursorPos(2, 11)
-        write("Status: ✗ Download failed!")
+        write("Status: Failed!")
         term.setCursorPos(2, 12)
         write("Error: " .. tostring(errorMsg))
     end
     
     term.setTextColor(colors.white)
     term.setCursorPos(2, h - 1)
-    write("Press any key to continue...")
+    write("Press any key...")
     os.pullEvent("key")
 end
 
@@ -241,93 +248,37 @@ function showMainMenu()
     
     term.setTextColor(colors.green)
     term.setCursorPos(2, 5)
-    write("Detected Turtle Type: " .. turtleType)
+    write("Type: " .. turtleType)
     
     term.setTextColor(colors.white)
-    term.setCursorPos(2, 7)
-    write("Available Options:")
+    term.setCursorPos(2, 6)
+    write("Options:")
     
-    -- Calculate how many options can fit on screen
-    local availableHeight = h - 10  -- Leave space for header and footer
-    local optionHeight = 3  -- Each option takes 3 lines
-    local maxVisibleOptions = math.floor(availableHeight / optionHeight)
+    local y = 8
+    local config = PROGRAM_CONFIGS[turtleType]
     
-    -- Determine which options to show
-    local endOption = math.min(startOption + maxVisibleOptions - 1, maxOptions)
-    
-    local y = 9
-    
-    -- Show options that fit on screen
-    for i = startOption, endOption do
-        if i == selectedOption then
-            -- Show selected option with details
-            if i == 1 then
-                local config = PROGRAM_CONFIGS[turtleType]
-                if config then
-                    highlightOption(i, "Update " .. config.name .. " Programs", y)
-                    y = y + 1
-                    term.setTextColor(colors.gray)
-                    term.setCursorPos(4, y)
-                    local programNames = {}
-                    for _, program in ipairs(config.programs) do
-                        table.insert(programNames, program.file)
-                    end
-                    write("Updates: " .. table.concat(programNames, ", "))
-                    y = y + 1
-                else
-                    highlightOption(i, "Update Detected Programs", y)
-                    y = y + 2
-                end
-            elseif i == 2 then
-                highlightOption(i, "Update All Programs", y)
-                y = y + 1
-                term.setTextColor(colors.gray)
-                term.setCursorPos(4, y)
-                write("Updates all available programs")
-                y = y + 1
-            elseif i == 3 then
-                highlightOption(i, "Manual Program Selection", y)
-                y = y + 1
-                term.setTextColor(colors.gray)
-                term.setCursorPos(4, y)
-                write("Choose individual programs to update")
-                y = y + 1
-            elseif i == 4 then
-                highlightOption(i, "Show Program Information", y)
-                y = y + 1
-                term.setTextColor(colors.gray)
-                term.setCursorPos(4, y)
-                write("Display updater help and information")
-                y = y + 1
-            elseif i == 5 then
-                highlightOption(i, "Exit", y)
-                y = y + 1
-                term.setTextColor(colors.gray)
-                term.setCursorPos(4, y)
-                write("Close the updater program")
-                y = y + 1
-            end
-        else
-            -- Show unselected option
-            if i == 1 then
-                local config = PROGRAM_CONFIGS[turtleType]
-                if config then
-                    highlightOption(i, "Update " .. config.name .. " Programs", y)
-                else
-                    highlightOption(i, "Update Detected Programs", y)
-                end
-            elseif i == 2 then
-                highlightOption(i, "Update All Programs", y)
-            elseif i == 3 then
-                highlightOption(i, "Manual Program Selection", y)
-            elseif i == 4 then
-                highlightOption(i, "Show Program Information", y)
-            elseif i == 5 then
-                highlightOption(i, "Exit", y)
-            end
-            y = y + 2
-        end
+    -- Option 1: Update detected turtle type programs
+    if config then
+        highlightOption(1, "Update " .. config.name, y)
+    else
+        highlightOption(1, "Update Detected", y)
     end
+    y = y + 1
+    
+    -- Option 2: Update all programs
+    highlightOption(2, "Update All", y)
+    y = y + 1
+    
+    -- Option 3: Manual selection
+    highlightOption(3, "Manual Select", y)
+    y = y + 1
+    
+    -- Option 4: Settings
+    highlightOption(4, "Settings", y)
+    y = y + 1
+    
+    -- Option 5: Exit
+    highlightOption(5, "Exit", y)
     
     drawFooter()
 end
@@ -358,67 +309,42 @@ function updatePrograms(config)
 end
 
 function showManualSelection()
-    local programs = {
-        {file = "startup.lua", description = "Startup script for disk deployment"},
-        {file = "clientdig.lua", description = "Client mining program"},
-        {file = "phone_server.lua", description = "Phone server communication"},
-        {file = "mineserver.lua", description = "Mining server coordinator"},
-        {file = "gps-deploy.lua", description = "GPS deployment system"},
-        {file = "updater.lua", description = "This updater program"}
-    }
-    
+    local programs = PROGRAM_CONFIGS.all.programs
     local manualSelectedOption = 1
-    local manualStartOption = 1
     
     while true do
         clearScreen()
         drawHeader()
         
         term.setTextColor(colors.yellow)
-        centerText("Manual Program Selection", 5)
+        centerText("Manual Select", 5)
         term.setTextColor(colors.white)
         
-        term.setCursorPos(2, 7)
-        write("Select a program to update:")
+        local y = 7
         
-        -- Calculate how many options can fit on screen
-        local availableHeight = h - 12  -- Leave space for header, title, and footer
-        local optionHeight = 2  -- Each option takes 2 lines
-        local maxVisibleOptions = math.floor(availableHeight / optionHeight)
-        
-        -- Determine which options to show
-        local endOption = math.min(manualStartOption + maxVisibleOptions - 1, #programs)
-        
-        local y = 9
-        
-        -- Show options that fit on screen
-        for i = manualStartOption, endOption do
+        -- Show all programs (compact for small screens)
+        for i, program in ipairs(programs) do
             if i == manualSelectedOption then
                 -- Show selected option with highlighting
                 term.setTextColor(colors.black)
                 term.setBackgroundColor(colors.white)
                 term.setCursorPos(2, y)
-                write("> " .. programs[i].file)
+                write("> " .. program.name)
                 term.setTextColor(colors.white)
                 term.setBackgroundColor(colors.black)
-                term.setCursorPos(4, y + 1)
-                write(programs[i].description)
             else
                 -- Show unselected option
                 term.setTextColor(colors.blue)
                 term.setCursorPos(2, y)
-                write("  " .. programs[i].file)
-                term.setTextColor(colors.gray)
-                term.setCursorPos(4, y + 1)
-                write(programs[i].description)
+                write("  " .. program.name)
             end
-            y = y + 2
+            y = y + 1
         end
         
         -- Footer
         term.setTextColor(colors.gray)
         term.setCursorPos(1, h)
-        write("Up/Down Navigate | Enter Select | Q Back")
+        write("Arrows:Navigate | Enter:Select | Q:Back")
         
         local event, key = os.pullEvent("key")
         
@@ -427,75 +353,85 @@ function showManualSelection()
         elseif key == keys.up then
             if manualSelectedOption > 1 then
                 manualSelectedOption = manualSelectedOption - 1
-                -- Adjust scrolling window if needed
-                if manualSelectedOption < manualStartOption then
-                    manualStartOption = manualSelectedOption
-                end
             end
         elseif key == keys.down then
             if manualSelectedOption < #programs then
                 manualSelectedOption = manualSelectedOption + 1
-                -- Adjust scrolling window if needed
-                if manualSelectedOption > manualStartOption + maxVisibleOptions - 1 then
-                    manualStartOption = manualSelectedOption - maxVisibleOptions + 1
-                end
             end
         elseif key == keys.enter then
-            downloadProgram(programs[manualSelectedOption].file, programs[manualSelectedOption].description)
+            downloadProgram(programs[manualSelectedOption], programs[manualSelectedOption].description)
             return
         end
     end
 end
 
-function showProgramInfo()
-    local info = [[
-MAENGORN UPDATER v1.0
-
-This updater automatically detects your turtle type and updates
-the appropriate programs for your configuration.
-
-TURTLE TYPES:
-• Disk Drive Turtle: Updates startup.lua and clientdig.lua
-• Phone Turtle: Updates phone_server.lua
-• Master Turtle: Updates mineserver.lua and gps-deploy.lua
-• All Programs: Updates everything
-
-FEATURES:
-• Automatic turtle type detection
-• Paginated text display
-• Error handling and validation
-• Manual program selection
-• Clean, user-friendly interface
-
-REPOSITORY:
-https://github.com/perlytiara/CC-Tweaked-TurtsAndComputers
-
-The updater downloads programs from the main branch and places
-them in the programs/perlytiara/Maengorn/ folder structure.
-]]
-    
-    currentPage = 1
-    clearScreen()
-    drawHeader()
-    displayText(info, 5)
-    drawFooter()
+function showSettings()
+    local settingsSelected = 1
+    local maxSettings = 3
     
     while true do
+        clearScreen()
+        drawHeader()
+        
+        term.setTextColor(colors.yellow)
+        centerText("Settings", 5)
+        term.setTextColor(colors.white)
+        
+        term.setCursorPos(2, 7)
+        write("Install Path: " .. installPath)
+        term.setCursorPos(2, 8)
+        write("Use .lua extension: " .. (useExtension and "Yes" or "No"))
+        term.setCursorPos(2, 9)
+        write("Current: " .. turtleType)
+        
+        local y = 11
+        highlightOption(1, "Change Install Path", y)
+        y = y + 1
+        highlightOption(2, "Toggle .lua Extension", y)
+        y = y + 1
+        highlightOption(3, "Back to Menu", y)
+        
+        term.setTextColor(colors.gray)
+        term.setCursorPos(1, h)
+        write("Arrows:Navigate | Enter:Select | Q:Back")
+        
         local event, key = os.pullEvent("key")
+        
         if key == keys.q or key == keys.escape then
-            break
-        elseif key == keys.up and currentPage > 1 then
-            currentPage = currentPage - 1
-            clearScreen()
-            drawHeader()
-            displayText(info, 5)
-            drawFooter()
-        elseif key == keys.down and currentPage < totalPages then
-            currentPage = currentPage + 1
-            clearScreen()
-            drawHeader()
-            displayText(info, 5)
-            drawFooter()
+            return
+        elseif key == keys.up then
+            if settingsSelected > 1 then
+                settingsSelected = settingsSelected - 1
+            end
+        elseif key == keys.down then
+            if settingsSelected < maxSettings then
+                settingsSelected = settingsSelected + 1
+            end
+        elseif key == keys.enter then
+            if settingsSelected == 1 then
+                clearScreen()
+                drawHeader()
+                term.setTextColor(colors.white)
+                term.setCursorPos(2, 5)
+                write("Enter install path:")
+                term.setCursorPos(2, 6)
+                write("(e.g., programs/myfolder/ or just /)")
+                term.setCursorPos(2, 8)
+                write("Current: " .. installPath)
+                term.setCursorPos(2, 10)
+                write("New path: ")
+                local newPath = read()
+                if newPath and newPath ~= "" then
+                    installPath = newPath
+                    if not installPath:match("/$") then
+                        installPath = installPath .. "/"
+                    end
+                end
+            elseif settingsSelected == 2 then
+                useExtension = not useExtension
+            elseif settingsSelected == 3 then
+                return
+            end
         end
     end
 end
@@ -552,7 +488,7 @@ function main()
             elseif selectedOption == 3 then
                 showManualSelection()
             elseif selectedOption == 4 then
-                showProgramInfo()
+                showSettings()
             elseif selectedOption == 5 then
                 clearScreen()
                 term.setCursorPos(1, 1)
