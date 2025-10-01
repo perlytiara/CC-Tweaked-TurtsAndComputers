@@ -1,4 +1,43 @@
 -- Startup script for newly deployed turtles
+
+-- Try to equip wireless modem if available
+function equipModem()
+    print("Checking for wireless modem...")
+    
+    -- Check if already equipped
+    if peripheral.find("modem") then
+        print("Modem already equipped")
+        return true
+    end
+    
+    -- Try to find modem in inventory
+    for slot = 1, 16 do
+        local item = turtle.getItemDetail(slot)
+        if item then
+            if item.name:find("wireless_modem") then
+                print("Found modem in slot " .. slot .. ", equipping...")
+                turtle.select(slot)
+                turtle.equipLeft()
+                if peripheral.find("modem") then
+                    print("Modem equipped on left")
+                    return true
+                end
+                turtle.equipRight()
+                if peripheral.find("modem") then
+                    print("Modem equipped on right")
+                    return true
+                end
+            end
+        end
+    end
+    
+    print("WARNING: No wireless modem found!")
+    return false
+end
+
+-- Try to equip modem first
+equipModem()
+
 function findDiskDrive()
     -- Check all sides for a disk drive
     local sides = {"left", "right", "front", "back", "top", "bottom"}

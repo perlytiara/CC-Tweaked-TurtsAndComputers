@@ -6,9 +6,21 @@ local CLIENT_PORT = 0
 local SERVER_PORT = 420
 
 function findWirelessModem()
-    for _, side in ipairs(peripheral.getNames()) do
-        if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then
-            return side
+    print("Searching for wireless modem...")
+    local peripherals = peripheral.getNames()
+    print("Found " .. #peripherals .. " peripherals")
+    
+    for _, side in ipairs(peripherals) do
+        local pType = peripheral.getType(side)
+        print("  " .. side .. ": " .. pType)
+        
+        if pType == "modem" then
+            local isWireless = peripheral.call(side, "isWireless")
+            print("    Wireless: " .. tostring(isWireless))
+            if isWireless then
+                print("Found wireless modem on: " .. side)
+                return side
+            end
         end
     end
     return nil
@@ -16,10 +28,17 @@ end
 
 local modemSide = findWirelessModem()
 if not modemSide then
+    print("ERROR: No wireless modem found!")
+    print("This turtle needs a wireless modem for GPS and communication!")
+    print("Available peripherals:")
+    for _, side in ipairs(peripheral.getNames()) do
+        print("  " .. side .. ": " .. peripheral.getType(side))
+    end
     error("No wireless modem found!")
 end
 local modem = peripheral.wrap(modemSide)
 modem.open(CLIENT_PORT)
+print("Modem ready on " .. modemSide)
 
 function waitForGPS(timeout)
     timeout = timeout or 10

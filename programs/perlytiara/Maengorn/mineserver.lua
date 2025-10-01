@@ -102,13 +102,41 @@ end
 
 function deploy(startCoords, quarySize, endCoords, options)
     --Place turtle from inventory
-    turtle.select(getItemIndex("computercraft:turtle_advanced"))
+    -- First try wireless turtle, then fall back to regular advanced turtle
+    local turtleSlot = getItemIndex("computercraft:turtle_advanced")
+    
+    turtle.select(turtleSlot)
     while(turtle.detect()) do
         os.sleep(0.3)
     end
 
     --Place and turn on turtle
+    print("Placing turtle...")
     turtle.place()
+    
+    -- Check if we need to add a wireless modem to the turtle
+    -- Try to place a modem on the turtle if it doesn't have one
+    local modemSlot = nil
+    for slot = 1, SLOT_COUNT do
+        local item = turtle.getItemDetail(slot)
+        if item and item.name == "computercraft:wireless_modem_advanced" then
+            modemSlot = slot
+            break
+        elseif item and item.name == "computercraft:wireless_modem_normal" then
+            modemSlot = slot
+            break
+        end
+    end
+    
+    if modemSlot then
+        print("Equipping modem to turtle...")
+        turtle.select(modemSlot)
+        turtle.drop(1)  -- Drop modem in front so turtle can pick it up
+        os.sleep(0.5)
+    else
+        print("WARNING: No wireless modem in inventory!")
+        print("Turtle may not have GPS access!")
+    end
     
     -- Turn on the turtle (it should boot from disk/startup automatically)
     print("Booting turtle...")
