@@ -60,7 +60,9 @@ local PROGRAM_CONFIGS = {
             {name = "turtle_deployer", file = "turtle_deployer.lua", description = "Turtle deployment system"},
             {name = "chest_manager", file = "chest_manager.lua", description = "Chest management system"},
             {name = "test_bootup", file = "test_bootup.lua", description = "Test boot-up system"},
-            {name = "linear_deployer", file = "linear_deployer.lua", description = "Linear step-by-step deployer"}
+            {name = "linear_deployer", file = "linear_deployer.lua", description = "Linear step-by-step deployer"},
+            {name = "simple_deployer", file = "simple_deployer.lua", description = "Simple deployment test"},
+            {name = "chest_test", file = "chest_test.lua", description = "Chest interaction test"}
         }
     },
     all = {
@@ -73,6 +75,8 @@ local PROGRAM_CONFIGS = {
             {name = "chest_manager", file = "chest_manager.lua", description = "Chest management system"},
             {name = "test_bootup", file = "test_bootup.lua", description = "Test boot-up system"},
             {name = "linear_deployer", file = "linear_deployer.lua", description = "Linear step-by-step deployer"},
+            {name = "simple_deployer", file = "simple_deployer.lua", description = "Simple deployment test"},
+            {name = "chest_test", file = "chest_test.lua", description = "Chest interaction test"},
             {name = "autoupdater", file = "autoupdater.lua", description = "This updater"}
         }
     }
