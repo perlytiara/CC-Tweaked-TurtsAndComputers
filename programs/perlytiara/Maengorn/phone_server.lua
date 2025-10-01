@@ -3,18 +3,20 @@
 local SERVER_PORT = 420
 local PHONE_PORT = 69
 
--- Auto-detect modem on either side
-local modem
-for _, side in ipairs({"left", "right", "front", "back", "top", "bottom"}) do
-    if peripheral.getType(side) == "modem" then
-        modem = peripheral.wrap(side)
-        break
+function findWirelessModem()
+    for _, side in ipairs(peripheral.getNames()) do
+        if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then
+            return side
+        end
     end
+    return nil
 end
 
-if not modem then
-    error("No modem found on any side")
+local modemSide = findWirelessModem()
+if not modemSide then
+    error("No wireless modem found!")
 end
+modem = peripheral.wrap(modemSide)
 local size = vector.new()
 
 if (#arg == 3) then

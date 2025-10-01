@@ -85,19 +85,20 @@
 -- to make sure the user entered values isn't > 254
 height = 255
 
--- Auto-detect modem and enable rednet
-local modemSide
-for _, side in ipairs({"left", "right", "front", "back", "top", "bottom"}) do
-    if peripheral.getType(side) == "modem" then
-        modemSide = side
-        break
+function findWirelessModem()
+    for _, side in ipairs(peripheral.getNames()) do
+        if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then
+            return side
+        end
     end
+    return nil
 end
 
+-- need to enable rednet first incase using locate
+local modemSide = findWirelessModem()
 if not modemSide then
-    error("No modem found on any side")
+    error("No wireless modem found!")
 end
-
 rednet.open(modemSide)
 
 local function printUsage()

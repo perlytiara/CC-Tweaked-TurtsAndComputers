@@ -15,20 +15,20 @@ else
     exit(1)
 end
 
-
--- Auto-detect modem on either side
-local modem
-for _, side in ipairs({"left", "right", "front", "back", "top", "bottom"}) do
-    if peripheral.getType(side) == "modem" then
-        modem = peripheral.wrap(side)
-        break
+function findWirelessModem()
+    for _, side in ipairs(peripheral.getNames()) do
+        if peripheral.getType(side) == "modem" and peripheral.call(side, "isWireless") then
+            return side
+        end
     end
+    return nil
 end
 
-if not modem then
-    error("No modem found on any side")
+local modemSide = findWirelessModem()
+if not modemSide then
+    error("No wireless modem found!")
 end
-
+local modem = peripheral.wrap(modemSide)
 modem.open(SERVER_PORT)
 
 local target = vector.new()
@@ -58,44 +58,14 @@ function parseParams(data)
 end
 
 function getItemIndex(itemName)
-    -- Scan all available inventory slots (turtles can have more than 16 slots)
-    for slot = 1, 64, 1 do  -- Check up to 64 slots to be safe
-        local success, item = pcall(turtle.getItemDetail, slot)
-        if success and item ~= nil then
-            if item["name"] == itemName then
+    for slot = 1, SLOT_COUNT, 1 do
+        local item = turtle.getItemDetail(slot)
+        if(item ~= nil) then
+            if(item["name"] == itemName) then
                 return slot
             end
         end
     end
-    return nil
-end
-
-function getFloppyDiskIndex()
-    -- Scan all available inventory slots for floppy disks
-    for slot = 1, 64, 1 do  -- Check up to 64 slots to be safe
-        local success, item = pcall(turtle.getItemDetail, slot)
-        if success and item ~= nil then
-            local name = item["name"]
-            if name == "computercraft:floppy_disk" or 
-               name == "computercraft:disk" or 
-               name:match("floppy") or 
-               name:match("disk") then
-                return slot
-            end
-        end
-    end
-    return nil
-end
-
-function debugInventory()
-    print("=== INVENTORY SCAN ===")
-    for slot = 1, 64, 1 do
-        local success, item = pcall(turtle.getItemDetail, slot)
-        if success and item ~= nil then
-            print(string.format("Slot %d: %s (count: %d)", slot, item.name, item.count))
-        end
-    end
-    print("=== END SCAN ===")
 end
 
 function checkFuel()
@@ -122,44 +92,6 @@ function deployFuelChest()
     end
 end
 
-function createDeploymentDisk()
-    -- Create a floppy disk with all necessary programs
-    local diskSlot = getItemIndex("computercraft:disk_drive")
-    if not diskSlot then
-        print("No disk drive found in inventory!")
-        debugInventory()  -- Show what's actually in the inventory
-        return false
-    end
-    
-    turtle.select(diskSlot)
-    turtle.place()
-    
-    -- Wait for disk to be ready
-    os.sleep(0.5)
-    
-    -- Copy all programs to disk
-    local programs = {
-        "clientdig.lua",
-        "startup.lua",
-        "phone_server.lua", 
-        "mineserver.lua",
-        "gps-deploy.lua",
-        "updater.lua"
-    }
-    
-    for _, program in ipairs(programs) do
-        if fs.exists(program) then
-            fs.copy(program, "disk/" .. program)
-            print("Copied " .. program .. " to disk")
-        end
-    end
-    
-    -- Pick up the disk drive
-    turtle.dig()
-    
-    return true
-end
-
 
 function deploy(startCoords, quarySize, endCoords, options)
     --Place turtle from inventory
@@ -172,32 +104,6 @@ function deploy(startCoords, quarySize, endCoords, options)
     turtle.place()
     peripheral.call("front", "turnOn")
     
-    -- Wait a moment for turtle to initialize
-    os.sleep(1)
-    
-    -- Deploy floppy disk with programs
-    if createDeploymentDisk() then
-        -- Place disk drive next to turtle
-        turtle.turnRight()
-        turtle.forward()
-        turtle.select(getItemIndex("computercraft:disk_drive"))
-        turtle.place()
-        
-        -- Place floppy disk in drive
-        local floppySlot = getFloppyDiskIndex()
-        if floppySlot then
-            turtle.select(floppySlot)
-            turtle.drop()
-        end
-        
-        -- Wait for programs to install
-        os.sleep(2)
-        
-        -- Pick up disk drive and return to position
-        turtle.dig()
-        turtle.back()
-        turtle.turnLeft()
-    end
     
     --Wait for client to send ping
     event, side, senderChannel, replyChannel, msg, distance = os.pullEvent("modem_message")
