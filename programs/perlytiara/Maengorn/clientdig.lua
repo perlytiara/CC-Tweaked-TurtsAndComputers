@@ -45,9 +45,21 @@ function waitForGPS(timeout)
     print("Waiting for GPS signal...")
     local x, y, z = gps.locate(timeout, false)
     
+    local retryCount = 0
     while not x do
-        print("No GPS signal! Retrying in 3 seconds...")
-        print("Make sure GPS satellites are active!")
+        retryCount = retryCount + 1
+        print(string.format("GPS attempt %d: No signal!", retryCount))
+        
+        if retryCount % 3 == 0 then
+            print("GPS troubleshooting:")
+            print("  - Need at least 4 GPS satellites")
+            print("  - Satellites must be spread out")
+            print("  - Check if satellites are running")
+            print("  - Ambiguous position = bad satellite placement")
+        else
+            print("Retrying in 3 seconds...")
+        end
+        
         os.sleep(3)
         x, y, z = gps.locate(timeout, false)
     end
