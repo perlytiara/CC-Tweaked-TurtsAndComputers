@@ -260,19 +260,25 @@ function downloadProgram(programInfo, description)
     clearScreen()
     drawHeader()
     
+    -- Compact layout for small terminals
+    local startY = 5
+    if h < 15 then
+        startY = 4
+    end
+    
     term.setTextColor(colors.yellow)
-    centerText("Downloading: " .. programInfo.name, 5)
+    centerText("Downloading: " .. programInfo.name, startY)
     term.setTextColor(colors.white)
     
-    term.setCursorPos(2, 7)
+    term.setCursorPos(2, startY + 1)
     write("From: " .. url)
-    term.setCursorPos(2, 8)
+    term.setCursorPos(2, startY + 2)
     write("To: " .. finalPath)
-    term.setCursorPos(2, 9)
+    term.setCursorPos(2, startY + 3)
     write("Desc: " .. description)
     
     term.setTextColor(colors.blue)
-    term.setCursorPos(2, 11)
+    term.setCursorPos(2, startY + 5)
     write("Status: Downloading...")
     
     -- Download the file
@@ -282,13 +288,13 @@ function downloadProgram(programInfo, description)
     
     if success then
         term.setTextColor(colors.green)
-        term.setCursorPos(2, 11)
+        term.setCursorPos(2, startY + 5)
         write("Status: Success!")
     else
         term.setTextColor(colors.red)
-        term.setCursorPos(2, 11)
+        term.setCursorPos(2, startY + 5)
         write("Status: Failed!")
-        term.setCursorPos(2, 12)
+        term.setCursorPos(2, startY + 6)
         write("Error: " .. tostring(errorMsg))
     end
     
@@ -302,15 +308,21 @@ function showMainMenu()
     clearScreen()
     drawHeader()
     
+    -- Compact layout for small terminals
+    local startY = 5
+    if h < 15 then
+        startY = 4
+    end
+    
     term.setTextColor(colors.green)
-    term.setCursorPos(2, 5)
+    term.setCursorPos(2, startY)
     write("Type: " .. turtleType)
     
     term.setTextColor(colors.white)
-    term.setCursorPos(2, 6)
+    term.setCursorPos(2, startY + 1)
     write("Options:")
     
-    local y = 8
+    local y = startY + 2
     local config = PROGRAM_CONFIGS[turtleType]
     
     -- Option 1: Update detected turtle type programs
@@ -367,6 +379,9 @@ end
 function showManualSelection()
     local programs = PROGRAM_CONFIGS.all.programs
     local manualSelectedOption = 1
+    local currentPage = 1
+    local itemsPerPage = math.max(1, h - 10) -- Leave room for header, footer, and page info
+    local totalPages = math.ceil(#programs / itemsPerPage)
     
     while true do
         clearScreen()
@@ -376,10 +391,23 @@ function showManualSelection()
         centerText("Manual Select", 5)
         term.setTextColor(colors.white)
         
+        -- Calculate which items to show on current page
+        local startItem = (currentPage - 1) * itemsPerPage + 1
+        local endItem = math.min(startItem + itemsPerPage - 1, #programs)
+        local pageSelectedOption = manualSelectedOption - (currentPage - 1) * itemsPerPage
+        
+        -- Show page info
+        term.setTextColor(colors.gray)
+        term.setCursorPos(2, 6)
+        write("Page " .. currentPage .. "/" .. totalPages .. " (" .. startItem .. "-" .. endItem .. " of " .. #programs .. ")")
+        
         local y = 7
         
-        -- Show all programs (compact for small screens)
-        for i, program in ipairs(programs) do
+        -- Show programs for current page
+        for i = startItem, endItem do
+            local program = programs[i]
+            local displayIndex = i - startItem + 1
+            
             if i == manualSelectedOption then
                 -- Show selected option with highlighting
                 term.setTextColor(colors.black)
@@ -397,10 +425,14 @@ function showManualSelection()
             y = y + 1
         end
         
-        -- Footer
+        -- Footer with navigation info
         term.setTextColor(colors.gray)
         term.setCursorPos(1, h)
-        write("Arrows:Navigate | Enter:Select | Q:Back")
+        if totalPages > 1 then
+            write("Arrows:Navigate | Page Up/Down:Page | Enter:Select | Q:Back")
+        else
+            write("Arrows:Navigate | Enter:Select | Q:Back")
+        end
         
         local event, key = os.pullEvent("key")
         
@@ -409,10 +441,28 @@ function showManualSelection()
         elseif key == keys.up then
             if manualSelectedOption > 1 then
                 manualSelectedOption = manualSelectedOption - 1
+                -- Check if we need to change pages
+                if manualSelectedOption <= (currentPage - 1) * itemsPerPage then
+                    currentPage = currentPage - 1
+                end
             end
         elseif key == keys.down then
             if manualSelectedOption < #programs then
                 manualSelectedOption = manualSelectedOption + 1
+                -- Check if we need to change pages
+                if manualSelectedOption > currentPage * itemsPerPage then
+                    currentPage = currentPage + 1
+                end
+            end
+        elseif key == keys.pageUp then
+            if currentPage > 1 then
+                currentPage = currentPage - 1
+                manualSelectedOption = math.min(manualSelectedOption, currentPage * itemsPerPage)
+            end
+        elseif key == keys.pageDown then
+            if currentPage < totalPages then
+                currentPage = currentPage + 1
+                manualSelectedOption = math.max(manualSelectedOption, (currentPage - 1) * itemsPerPage + 1)
             end
         elseif key == keys.enter then
             downloadProgram(programs[manualSelectedOption], programs[manualSelectedOption].description)
