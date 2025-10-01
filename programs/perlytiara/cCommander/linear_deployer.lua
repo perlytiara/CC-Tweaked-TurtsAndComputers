@@ -22,6 +22,9 @@ local blnDebugPrint = true
 -- Position tracking
 local originalFacing = 0 -- Will store original direction
 
+-- Terminal dimensions
+local w, h = term.getSize()
+
 ---------------------------------------
 ---- UTILITY FUNCTIONS --------------- 
 ---------------------------------------
@@ -343,7 +346,6 @@ function main()
         write("Right turtle: " .. (rightSuccess and "Success" or "Failed"))
     end
     
-    local w, h = term.getSize()
     term.setCursorPos(2, h - 1)
     write("Press any key to exit...")
     os.pullEvent("key")
