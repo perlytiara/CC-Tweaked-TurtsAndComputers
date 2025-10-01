@@ -58,13 +58,20 @@ function parseParams(data)
 end
 
 function getItemIndex(itemName)
-    for slot = 1, SLOT_COUNT, 1 do
-        local item = turtle.getItemDetail(slot)
-        if(item ~= nil) then
-            if(item["name"] == itemName) then
-                return slot
+    while true do
+        for slot = 1, SLOT_COUNT, 1 do
+            local item = turtle.getItemDetail(slot)
+            if(item ~= nil) then
+                if(item["name"] == itemName) then
+                    return slot
+                end
             end
         end
+        
+        -- Item not found, wait for user to add it
+        print(string.format("Waiting for: %s", itemName))
+        print("Please add to inventory...")
+        os.sleep(2)
     end
 end
 
