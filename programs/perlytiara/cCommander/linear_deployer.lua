@@ -34,6 +34,17 @@ function debugPrint(message)
     end
 end
 
+function showInventory()
+    debugPrint("=== TURTLE INVENTORY ===")
+    for slot = 1, 16 do
+        local item = turtle.getItemDetail(slot)
+        if item then
+            debugPrint("Slot " .. slot .. ": " .. item.name .. " x" .. item.count)
+        end
+    end
+    debugPrint("=== END INVENTORY ===")
+end
+
 function clearScreen()
     term.clear()
     term.setCursorPos(1, 1)
@@ -102,14 +113,50 @@ function getTurtleFromChest(direction)
         return false
     end
     
+    debugPrint("Chest found: " .. data.name)
+    
     -- Try to suck one turtle from chest
+    debugPrint("Attempting to suck turtle from chest...")
     local sucked = turtle.suck(1)
     
     if sucked then
         debugPrint("Successfully got turtle from " .. direction .. " chest")
+        -- Check what we got
+        for slot = 1, 16 do
+            local item = turtle.getItemDetail(slot)
+            if item then
+                debugPrint("Got item: " .. item.name .. " x" .. item.count)
+            end
+        end
         return true
     else
-        debugPrint("Failed to get turtle from " .. direction .. " chest - no turtles available")
+        debugPrint("Failed to get turtle from " .. direction .. " chest - trying alternative method")
+        
+        -- Try using peripheral method if available
+        local chest = peripheral.wrap("front")
+        if chest then
+            debugPrint("Using peripheral method to access chest")
+            local size = chest.size()
+            debugPrint("Chest size: " .. size)
+            
+            for slot = 1, size do
+                local item = chest.getItemDetail(slot)
+                if item then
+                    debugPrint("Chest slot " .. slot .. ": " .. item.name .. " x" .. item.count)
+                    if item.name:match("turtle") or item.name:match("computer") then
+                        debugPrint("Found turtle in chest slot " .. slot)
+                        -- Try to pull the item
+                        local pulled = chest.pullItems("turtle", slot, 1)
+                        if pulled > 0 then
+                            debugPrint("Successfully pulled turtle using peripheral method")
+                            return true
+                        end
+                    end
+                end
+            end
+        end
+        
+        debugPrint("No turtles found in " .. direction .. " chest")
         return false
     end
 end
@@ -154,12 +201,20 @@ end
 function deploySingleTurtle(direction)
     debugPrint("=== DEPLOYING " .. string.upper(direction) .. " TURTLE ===")
     
+    -- Show inventory before
+    debugPrint("Inventory BEFORE getting turtle:")
+    showInventory()
+    
     -- Step 1: Get turtle from chest
     local gotTurtle = getTurtleFromChest(direction)
     if not gotTurtle then
         debugPrint("Failed to get turtle from " .. direction .. " chest")
         return false
     end
+    
+    -- Show inventory after getting turtle
+    debugPrint("Inventory AFTER getting turtle:")
+    showInventory()
     
     -- Step 2: Return to original position
     returnToOriginalPosition(direction)
@@ -174,6 +229,10 @@ function deploySingleTurtle(direction)
     end
     
     debugPrint("Turtle placed successfully!")
+    
+    -- Show inventory after placing
+    debugPrint("Inventory AFTER placing turtle:")
+    showInventory()
     
     -- Step 4: Get coal from below chest
     debugPrint("Getting coal for the deployed turtle...")
