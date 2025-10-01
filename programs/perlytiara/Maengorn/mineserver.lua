@@ -110,44 +110,8 @@ function deploy(startCoords, quarySize, endCoords, options)
     --Place and turn on turtle
     turtle.place()
     
-    -- Place disk drive to the left of the newly spawned turtle
-    turtle.turnLeft()
-    turtle.select(getItemIndex("computercraft:disk_drive"))
-    
-    -- Clear the space if needed and place disk drive
-    if turtle.detect() then
-        turtle.dig()
-    end
-    turtle.place()
-    
-    -- Insert disk with startup files
-    turtle.select(getItemIndex("computercraft:disk"))
-    turtle.drop()
-    
-    -- Wait for disk to be recognized
-    os.sleep(0.5)
-    
-    -- Write startup script to disk
-    if fs.exists("disk/") then
-        -- Copy clientdig to disk
-        if fs.exists("/clientdig") or fs.exists("clientdig") then
-            local sourcePath = fs.exists("/clientdig") and "/clientdig" or "clientdig"
-            fs.copy(sourcePath, "disk/clientdig")
-        end
-        
-        -- Copy startup to disk
-        if fs.exists("/startup") or fs.exists("startup") then
-            local sourcePath = fs.exists("/startup") and "/startup" or "startup"
-            fs.copy(sourcePath, "disk/startup")
-        end
-        
-        print("Files copied to disk")
-    else
-        print("WARNING: No disk drive detected!")
-    end
-    
-    -- Turn back to face the turtle and turn it on
-    turtle.turnRight()
+    -- Turn on the turtle (it should boot from disk/startup automatically)
+    print("Booting turtle...")
     peripheral.call("front", "turnOn")
     
     
