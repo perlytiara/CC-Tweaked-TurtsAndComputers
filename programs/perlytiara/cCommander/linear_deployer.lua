@@ -77,16 +77,39 @@ function getTurtleFromChest(direction)
     end
     
     -- Move forward to chest
-    turtle.forward()
+    local moved = turtle.forward()
+    if not moved then
+        debugPrint("Failed to move forward to " .. direction .. " chest")
+        -- Turn back to original direction
+        if direction == "left" then
+            turtle.turnRight()
+        else
+            turtle.turnLeft()
+        end
+        return false
+    end
+    
+    -- Check if there's a chest in front
+    local success, data = turtle.inspect()
+    if not success or not data.name:match("chest") then
+        debugPrint("No chest found at " .. direction .. " position")
+        turtle.back()
+        if direction == "left" then
+            turtle.turnRight()
+        else
+            turtle.turnLeft()
+        end
+        return false
+    end
     
     -- Try to suck one turtle from chest
-    local success = turtle.suck(1)
+    local sucked = turtle.suck(1)
     
-    if success then
+    if sucked then
         debugPrint("Successfully got turtle from " .. direction .. " chest")
         return true
     else
-        debugPrint("Failed to get turtle from " .. direction .. " chest")
+        debugPrint("Failed to get turtle from " .. direction .. " chest - no turtles available")
         return false
     end
 end
@@ -108,11 +131,27 @@ end
 function placeTurtleAndPosition(direction)
     debugPrint("Placing turtle and positioning it")
     
+    -- Check if we have a turtle to place
+    local hasTurtle = false
+    for slot = 1, 16 do
+        local item = turtle.getItemDetail(slot)
+        if item and (item.name:match("turtle") or item.name:match("computer")) then
+            hasTurtle = true
+            debugPrint("Found turtle in slot " .. slot .. ": " .. item.name)
+            break
+        end
+    end
+    
+    if not hasTurtle then
+        debugPrint("No turtle found in inventory to place")
+        return false
+    end
+    
     -- Place the turtle down
     local success = turtle.placeDown()
     
     if not success then
-        debugPrint("Failed to place turtle down")
+        debugPrint("Failed to place turtle down - check if there's space below")
         return false
     end
     
@@ -236,6 +275,60 @@ function deployRightTurtle()
     return true
 end
 
+function checkSetup()
+    debugPrint("Checking setup...")
+    
+    local issues = {}
+    
+    -- Check left chest
+    turtle.turnLeft()
+    local moved = turtle.forward()
+    if moved then
+        local success, data = turtle.inspect()
+        if success and data.name:match("chest") then
+            debugPrint("Left chest found")
+        else
+            table.insert(issues, "No chest found to the left")
+        end
+        turtle.back()
+    else
+        table.insert(issues, "Cannot move left - no chest there")
+    end
+    turtle.turnRight()
+    
+    -- Check right chest
+    turtle.turnRight()
+    moved = turtle.forward()
+    if moved then
+        local success, data = turtle.inspect()
+        if success and data.name:match("chest") then
+            debugPrint("Right chest found")
+        else
+            table.insert(issues, "No chest found to the right")
+        end
+        turtle.back()
+    else
+        table.insert(issues, "Cannot move right - no chest there")
+    end
+    turtle.turnLeft()
+    
+    -- Check below chest
+    local moved = turtle.down()
+    if moved then
+        local success, data = turtle.inspect()
+        if success and data.name:match("chest") then
+            debugPrint("Below chest found")
+        else
+            table.insert(issues, "No chest found below")
+        end
+        turtle.up()
+    else
+        table.insert(issues, "Cannot move down - no chest there")
+    end
+    
+    return issues
+end
+
 function showMainMenu()
     clearScreen()
     drawHeader()
@@ -259,11 +352,33 @@ function showMainMenu()
     term.setCursorPos(4, 12)
     write("4. Position computer/turtle at center")
     
-    term.setTextColor(colors.green)
+    -- Check setup
+    term.setTextColor(colors.blue)
     term.setCursorPos(2, 14)
-    write("Press any key to start deployment...")
-    term.setTextColor(colors.white)
+    write("Checking setup...")
     
+    local issues = checkSetup()
+    if #issues == 0 then
+        term.setTextColor(colors.green)
+        term.setCursorPos(2, 15)
+        write("Setup looks good!")
+        term.setTextColor(colors.green)
+        term.setCursorPos(2, 17)
+        write("Press any key to start deployment...")
+    else
+        term.setTextColor(colors.red)
+        term.setCursorPos(2, 15)
+        write("Setup issues found:")
+        for i, issue in ipairs(issues) do
+            term.setCursorPos(4, 15 + i)
+            write("- " .. issue)
+        end
+        term.setTextColor(colors.yellow)
+        term.setCursorPos(2, 15 + #issues + 1)
+        write("Fix these issues and restart the program")
+    end
+    
+    term.setTextColor(colors.white)
     os.pullEvent("key")
 end
 
