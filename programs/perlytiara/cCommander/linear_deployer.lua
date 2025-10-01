@@ -128,64 +128,6 @@ function returnToOriginalPosition(direction)
     end
 end
 
-function placeTurtleAndPosition(direction)
-    debugPrint("Placing turtle and positioning it")
-    
-    -- Check if we have a turtle to place
-    local hasTurtle = false
-    for slot = 1, 16 do
-        local item = turtle.getItemDetail(slot)
-        if item and (item.name:match("turtle") or item.name:match("computer")) then
-            hasTurtle = true
-            debugPrint("Found turtle in slot " .. slot .. ": " .. item.name)
-            break
-        end
-    end
-    
-    if not hasTurtle then
-        debugPrint("No turtle found in inventory to place")
-        return false
-    end
-    
-    -- Place the turtle down
-    local success = turtle.placeDown()
-    
-    if not success then
-        debugPrint("Failed to place turtle down - check if there's space below")
-        return false
-    end
-    
-    debugPrint("Turtle placed, waiting for it to load...")
-    sleep(3) -- Wait for turtle to initialize
-    
-    -- Position the deployed turtle
-    if direction == "left" then
-        -- For left turtle: turn left, walk forward, turn right (facing right toward center)
-        debugPrint("Positioning left turtle to face right")
-        
-        -- The deployed turtle should:
-        -- 1. Turn left (relative to its spawn direction)
-        -- 2. Move forward one block
-        -- 3. Turn right to face the center
-        
-        -- We can't directly control the deployed turtle, but we can move to position ourselves
-        -- Move to the right side of the deployed turtle
-        turtle.turnRight()
-        turtle.forward()
-        turtle.turnLeft()
-        
-    else
-        -- For right turtle: turn right, walk forward, turn left (facing left toward center)
-        debugPrint("Positioning right turtle to face left")
-        
-        -- Move to the left side of the deployed turtle
-        turtle.turnLeft()
-        turtle.forward()
-        turtle.turnRight()
-    end
-    
-    return true
-end
 
 function getCoalFromBelow()
     debugPrint("Getting coal from below chest")
@@ -209,69 +151,35 @@ function getCoalFromBelow()
     end
 end
 
-function deployLeftTurtle()
-    debugPrint("=== DEPLOYING LEFT TURTLE ===")
+function deploySingleTurtle(direction)
+    debugPrint("=== DEPLOYING " .. string.upper(direction) .. " TURTLE ===")
     
-    -- Step 1: Get turtle from left chest
-    local gotTurtle = getTurtleFromChest("left")
+    -- Step 1: Get turtle from chest
+    local gotTurtle = getTurtleFromChest(direction)
     if not gotTurtle then
-        debugPrint("Failed to get turtle from left chest")
+        debugPrint("Failed to get turtle from " .. direction .. " chest")
         return false
     end
     
     -- Step 2: Return to original position
-    returnToOriginalPosition("left")
+    returnToOriginalPosition(direction)
     
-    -- Step 3: Place turtle and position it
-    local placed = placeTurtleAndPosition("left")
-    if not placed then
-        debugPrint("Failed to place left turtle")
+    -- Step 3: Place turtle down
+    debugPrint("Placing turtle down...")
+    local success = turtle.placeDown()
+    
+    if not success then
+        debugPrint("Failed to place turtle down")
         return false
     end
+    
+    debugPrint("Turtle placed successfully!")
     
     -- Step 4: Get coal from below chest
+    debugPrint("Getting coal for the deployed turtle...")
     getCoalFromBelow()
     
-    -- Step 5: Move to left side and face right (toward center)
-    debugPrint("Moving to left side and facing right")
-    turtle.turnLeft()
-    turtle.forward()
-    turtle.turnRight()
-    
-    debugPrint("Left turtle deployment complete")
-    return true
-end
-
-function deployRightTurtle()
-    debugPrint("=== DEPLOYING RIGHT TURTLE ===")
-    
-    -- Step 1: Get turtle from right chest
-    local gotTurtle = getTurtleFromChest("right")
-    if not gotTurtle then
-        debugPrint("Failed to get turtle from right chest")
-        return false
-    end
-    
-    -- Step 2: Return to original position
-    returnToOriginalPosition("right")
-    
-    -- Step 3: Place turtle and position it
-    local placed = placeTurtleAndPosition("right")
-    if not placed then
-        debugPrint("Failed to place right turtle")
-        return false
-    end
-    
-    -- Step 4: Get coal from below chest
-    getCoalFromBelow()
-    
-    -- Step 5: Move to right side and face left (toward center)
-    debugPrint("Moving to right side and facing left")
-    turtle.turnRight()
-    turtle.forward()
-    turtle.turnLeft()
-    
-    debugPrint("Right turtle deployment complete")
+    debugPrint(direction .. " turtle deployment complete")
     return true
 end
 
@@ -406,7 +314,7 @@ function main()
     centerText("Deploying Left Turtle", 5)
     term.setTextColor(colors.white)
     
-    local leftSuccess = deployLeftTurtle()
+    local leftSuccess = deploySingleTurtle("left")
     
     if leftSuccess then
         term.setTextColor(colors.green)
@@ -425,7 +333,7 @@ function main()
     centerText("Deploying Right Turtle", 5)
     term.setTextColor(colors.white)
     
-    local rightSuccess = deployRightTurtle()
+    local rightSuccess = deploySingleTurtle("right")
     
     if rightSuccess then
         term.setTextColor(colors.green)
