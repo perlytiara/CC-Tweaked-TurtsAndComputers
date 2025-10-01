@@ -21,6 +21,22 @@ end
 local modem = peripheral.wrap(modemSide)
 modem.open(CLIENT_PORT)
 
+function waitForGPS(timeout)
+    timeout = timeout or 10
+    print("Waiting for GPS signal...")
+    local x, y, z = gps.locate(timeout, false)
+    
+    while not x do
+        print("No GPS signal! Retrying in 3 seconds...")
+        print("Make sure GPS satellites are active!")
+        os.sleep(3)
+        x, y, z = gps.locate(timeout, false)
+    end
+    
+    print(string.format("GPS acquired: %d, %d, %d", x, y, z))
+    return x, y, z
+end
+
 function split (inputstr, sep)
     if sep == nil then
             sep = "%s"
@@ -64,7 +80,8 @@ end
 
 
 function getOrientation()
-    loc1 = vector.new(gps.locate(2, false))
+    local x1, y1, z1 = waitForGPS()
+    loc1 = vector.new(x1, y1, z1)
     if not turtle.forward() then
         for j=1,6 do
             if not turtle.forward() then
@@ -74,7 +91,8 @@ function getOrientation()
             end
         end
     end
-    loc2 = vector.new(gps.locate(2, false))
+    local x2, y2, z2 = waitForGPS()
+    loc2 = vector.new(x2, y2, z2)
     heading = loc2 - loc1
     turtle.down()
     turtle.down()
@@ -151,7 +169,7 @@ end
 
 
 function moveTo(coords, heading)
-    local currX, currY, currZ = gps.locate()
+    local currX, currY, currZ = waitForGPS()
     local xDiff, yDiff, zDiff = coords.x - currX, coords.y - currY, coords.z - currZ
     print(string.format("Distances from start: %d %d %d", xDiff, yDiff, zDiff))
 
@@ -182,7 +200,7 @@ end
 
 
 function calculateFuel(travels, digSize, fuelType)
-    local currX, currY, currZ = gps.locate()
+    local currX, currY, currZ = waitForGPS()
     local xDiff, yDiff, zDiff = travels.x - currX, travels.y - currY, travels.z - currZ
 
     local volume = digSize.x + digSize.y + digSize.z
@@ -417,7 +435,7 @@ finishedHeading = startQuary(quary.x, quary.y, quary.z, finalHeading)
 
 
 function returnTo(coords, heading)
-    local currX, currY, currZ = gps.locate()
+    local currX, currY, currZ = waitForGPS()
     local xDiff, yDiff, zDiff = coords.x - currX, coords.y - currY, coords.z - currZ
     print(string.format("Distances from end: %d %d %d", xDiff, yDiff, zDiff))
     
