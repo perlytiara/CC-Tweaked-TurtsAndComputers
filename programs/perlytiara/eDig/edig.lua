@@ -233,6 +233,66 @@ local function digStraightTunnel(height, width, length, shouldPlaceFloor)
   print("Done! Dug " .. slice .. " slices")
 end
 
+-- Dig dome slice
+local function digDomeSlice(heights, width, shouldPlaceFloor)
+  shouldPlaceFloor = checkBlocksForFloor(shouldPlaceFloor)
+  
+  -- Enter slice
+  df()
+  gf()
+  
+  -- Move to level 2 for dome shape
+  if heights[1] >= 2 then
+    gu()
+  end
+  
+  -- Dig left to right
+  for x = 1, width do
+    local h = heights[x] or 0
+    
+    -- Adjust height
+    if h >= 1 then turtle.digDown() end
+    if h >= 3 then du() end
+    
+    -- Move right if not last column
+    if x < width then
+      turtle.turnLeft()
+      df()
+      gf()
+      turtle.turnRight()
+    end
+  end
+  
+  -- Upper pass for height 4 columns
+  local needUpper = false
+  for i = 1, #heights do
+    if heights[i] >= 4 then needUpper = true break end
+  end
+  
+  if needUpper then
+    gu() -- Move to level 3
+    for x = 1, width do
+      if (heights[x] or 0) >= 4 then du() end
+      if x < width then
+        turtle.turnLeft()
+        gf()
+        turtle.turnRight()
+      end
+    end
+    gd() -- Return to level 2
+  end
+  
+  -- Return to base level
+  gd()
+  
+  -- Return to starting position
+  for w = 1, width - 1 do
+    turtle.turnLeft()
+    gf()
+    turtle.turnRight()
+  end
+end
+
 -- Dome tunnel digging
 local function digDomeTunnel(shape, length, shouldPlaceFloor)
   local heights = getDomeHeights(shape, DOME_SHAPES[shape].width, 3, 4, 0)
@@ -311,65 +371,6 @@ local function digTunnelSlice(height, width, shouldPlaceFloor)
   end
 end
 
--- Dig dome slice
-local function digDomeSlice(heights, width, shouldPlaceFloor)
-  shouldPlaceFloor = checkBlocksForFloor(shouldPlaceFloor)
-  
-  -- Enter slice
-  df()
-  gf()
-  
-  -- Move to level 2 for dome shape
-  if heights[1] >= 2 then
-    gu()
-  end
-  
-  -- Dig left to right
-  for x = 1, width do
-    local h = heights[x] or 0
-    
-    -- Adjust height
-    if h >= 1 then turtle.digDown() end
-    if h >= 3 then du() end
-    
-    -- Move right if not last column
-    if x < width then
-      turtle.turnLeft()
-      df()
-      gf()
-      turtle.turnRight()
-    end
-  end
-  
-  -- Upper pass for height 4 columns
-  local needUpper = false
-  for i = 1, #heights do
-    if heights[i] >= 4 then needUpper = true break end
-  end
-  
-  if needUpper then
-    gu() -- Move to level 3
-    for x = 1, width do
-      if (heights[x] or 0) >= 4 then du() end
-      if x < width then
-        turtle.turnLeft()
-        gf()
-        turtle.turnRight()
-      end
-    end
-    gd() -- Return to level 2
-  end
-  
-  -- Return to base level
-  gd()
-  
-  -- Return to starting position
-  for w = 1, width - 1 do
-    turtle.turnLeft()
-    gf()
-    turtle.turnRight()
-  end
-end
 
 -- Dig command
 local function digCommand()
