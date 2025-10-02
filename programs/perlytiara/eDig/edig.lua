@@ -119,7 +119,7 @@ local function placeFloor()
 end
 
 -- Tunnel digging function
-local function digTunnelSlice(height, width, placeFloor)
+local function digTunnelSlice(height, width, shouldPlaceFloor)
   -- Dig the slice in front of turtle
   -- First, dig the height
   for h = 1, height - 1 do
@@ -130,7 +130,7 @@ local function digTunnelSlice(height, width, placeFloor)
   -- Dig forward
   df()
   gf()
-  if placeFloor then placeFloor() end
+  if shouldPlaceFloor then placeFloor() end
   
   -- Return to base level
   for h = 1, height - 1 do gd() end
@@ -140,7 +140,7 @@ local function digTunnelSlice(height, width, placeFloor)
     turtle.turnLeft()
     df()
     gf()
-    if placeFloor then placeFloor() end
+    if shouldPlaceFloor then placeFloor() end
     
     -- Dig up for height
     for h = 1, height - 1 do
