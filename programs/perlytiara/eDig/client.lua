@@ -25,10 +25,10 @@ while true do
   end
   
   if cmd ~= "" then
-    print("Running: edig dig " .. cmd)
-    local ok, err = pcall(function()
-      shell.run("edig dig " .. cmd)
-    end)
+      print("Running: eDig/edig dig " .. cmd)
+      local ok, err = pcall(function()
+        shell.run("eDig/edig dig " .. cmd)
+      end)
     
     if ok then
       rednet.send(sender, {status = "done", id = id})

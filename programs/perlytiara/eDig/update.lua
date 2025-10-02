@@ -32,9 +32,9 @@ end
 
 local success = 0
 
--- Update all files in eDig directory
+-- Update all files in current directory (eDig folder)
 for name, url in pairs(files) do
-  local filename = "eDig/" .. name
+  local filename = name
   if deleteAndDownload(url, filename) then
     success = success + 1
   end
@@ -42,7 +42,7 @@ end
 
 -- Update startup file in root directory
 if turtle then
-  if deleteAndDownload(files.startup, "startup") then
+  if deleteAndDownload(files.startup, "../startup") then
     success = success + 1
   end
 end
