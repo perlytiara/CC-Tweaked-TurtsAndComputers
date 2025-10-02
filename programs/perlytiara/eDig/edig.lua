@@ -113,13 +113,65 @@ local function placeFloor()
     local slot = findBlockSlot()
     if slot then
       turtle.select(slot)
-      turtle.placeDown()
+      local success = turtle.placeDown()
+      if not success then
+        print("Warning: Could not place floor block (no blocks available)")
+        print("Add blocks to inventory to continue with floor placement")
+        print("Press Enter to continue without floor placement...")
+        read()
+        return false
+      end
+      return true
+    else
+      print("Warning: No blocks available for floor placement")
+      print("Add blocks to inventory to continue with floor placement")
+      print("Press Enter to continue without floor placement...")
+      read()
+      return false
     end
   end
+  return true
+end
+
+-- Check if we have blocks for floor placement
+local function checkBlocksForFloor(shouldPlaceFloor)
+  if shouldPlaceFloor then
+    local slot = findBlockSlot()
+    if not slot then
+      print("No blocks available for floor placement!")
+      print("Options:")
+      print("1. Add blocks to inventory and press Enter")
+      print("2. Type 'skip' to continue without floor placement")
+      print("3. Type 'stop' to abort")
+      
+      while true do
+        write("Choice: ")
+        local choice = string.lower(read())
+        if choice == "skip" then
+          return false
+        elseif choice == "stop" then
+          error("Operation aborted by user")
+        elseif choice == "" then
+          -- Check again for blocks
+          slot = findBlockSlot()
+          if slot then
+            print("Blocks found! Continuing...")
+            return true
+          else
+            print("Still no blocks. Please add blocks or type 'skip' or 'stop'")
+          end
+        end
+      end
+    end
+  end
+  return shouldPlaceFloor
 end
 
 -- Tunnel digging function
 local function digTunnelSlice(height, width, shouldPlaceFloor)
+  -- Check blocks before starting
+  shouldPlaceFloor = checkBlocksForFloor(shouldPlaceFloor)
+  
   -- Dig the slice in front of turtle
   -- First, dig the height
   for h = 1, height - 1 do
