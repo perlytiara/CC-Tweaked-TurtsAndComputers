@@ -27,7 +27,14 @@ while true do
   if cmd ~= "" then
       print("Running: eDig/edig dig " .. cmd)
       local ok, err = pcall(function()
-        shell.run("eDig/edig dig " .. cmd)
+        -- Try different paths to find the edig program
+        if fs.exists("eDig/edig") then
+          shell.run("eDig/edig dig " .. cmd)
+        elseif fs.exists("edig") then
+          shell.run("edig dig " .. cmd)
+        else
+          error("Could not find edig program")
+        end
       end)
     
     if ok then
