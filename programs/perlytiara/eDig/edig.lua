@@ -303,6 +303,12 @@ local function digDomeTunnel(shape, length, shouldPlaceFloor)
   print("Shape: " .. shape .. " (" .. width .. " wide)")
   print("Length: " .. length)
   
+  -- Debug: Check if function exists
+  if type(digDomeSlice) ~= "function" then
+    print("ERROR: digDomeSlice function not found!")
+    return
+  end
+  
   while slice < length do
     slice = slice + 1
     

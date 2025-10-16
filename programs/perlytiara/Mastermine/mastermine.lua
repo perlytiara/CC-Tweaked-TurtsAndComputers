@@ -2774,21 +2774,15 @@ reverse_shift = {
 
 function load_mine()
     -- LOAD MINE INTO state.mine FROM /mine/<x,z>/ DIRECTORY
-    print("DEBUG: Loading mine from directory...")
     state.mine_dir_path = '/mine/' .. config.locations.mine_enter.x .. ',' .. config.locations.mine_enter.z .. '/'
-    print("DEBUG: Mine directory path: " .. state.mine_dir_path)
     state.mine = {}
     
     if not fs.exists(state.mine_dir_path) then
-        print("DEBUG: Creating new mine directory")
         fs.makeDir(state.mine_dir_path)
     end
     
     if fs.exists(state.mine_dir_path .. 'on') then
-        print("DEBUG: Mine is set to ON")
         state.on = true
-    else
-        print("DEBUG: Mine is set to OFF")
     end
     
     for _, level_and_chance in pairs(config.mine_levels) do
@@ -2952,14 +2946,10 @@ end
 
 function gen_next_strip()
     local level = get_mining_level()
-    print("DEBUG: Generating next strip for level: " .. tostring(level))
     state.next_strip = get_closest_free_strip(level)
     if state.next_strip then
-        print("DEBUG: Next strip found at " .. state.next_strip.x .. "," .. state.next_strip.y .. "," .. state.next_strip.z .. " facing " .. state.next_strip.orientation)
         state.min_fuel = (basics.distance(state.next_strip, config.locations.mine_enter) + config.mission_length) * 3
-        print("DEBUG: Minimum fuel required: " .. state.min_fuel)
     else
-        print("DEBUG: No available strips found")
         state.min_fuel = nil
     end
 end
@@ -3039,10 +3029,6 @@ end
 
 
 function go_mine(mining_turtle)
-    print("DEBUG: Sending turtle " .. mining_turtle.id .. " to mine at strip " .. mining_turtle.strip.x .. "," .. mining_turtle.strip.y .. "," .. mining_turtle.strip.z)
-    print("DEBUG: Mining direction: " .. mining_turtle.strip.orientation)
-    print("DEBUG: Steps left before mining: " .. mining_turtle.steps_left)
-    
     update_strip(mining_turtle)
     add_task(mining_turtle, {
         action = 'mine_vein',
@@ -3052,7 +3038,6 @@ function go_mine(mining_turtle)
         action = 'clear_gravity_blocks',
     })
     if config.use_chunky_turtles then
-        print("DEBUG: Using chunky turtles - setting up follow pattern")
         add_task(mining_turtle, {
             action = 'go_to_strip',
             data = {mining_turtle.strip},
@@ -3061,7 +3046,6 @@ function go_mine(mining_turtle)
             end_function_args = {mining_turtle.pair},
         })
     else
-        print("DEBUG: Solo mining mode - no chunky turtle")
         add_task(mining_turtle, {
             action = 'go_to_strip',
             data = {mining_turtle.strip},
@@ -3069,7 +3053,6 @@ function go_mine(mining_turtle)
         })
     end
     mining_turtle.steps_left = mining_turtle.steps_left - 1
-    print("DEBUG: Steps remaining after mining: " .. mining_turtle.steps_left)
     local file = fs.open(state.turtles_dir_path .. mining_turtle.id .. '/deployed', 'w')
     file.write(mining_turtle.steps_left)
     file.close()
@@ -3107,10 +3090,6 @@ end
 
 
 function pair_turtles_begin(turtle1, turtle2)
-    print("DEBUG: Beginning turtle pairing process")
-    print("DEBUG: Turtle 1 - ID: " .. turtle1.id .. " Type: " .. tostring(turtle1.data.turtle_type))
-    print("DEBUG: Turtle 2 - ID: " .. turtle2.id .. " Type: " .. tostring(turtle2.data.turtle_type))
-    
     local mining_turtle
     local chunky_turtle
     if turtle1.data.turtle_type == 'mining' then
@@ -3127,21 +3106,17 @@ function pair_turtles_begin(turtle1, turtle2)
         mining_turtle = turtle2
     end
     
-    print("DEBUG: Mining turtle: " .. mining_turtle.id)
-    print("DEBUG: Chunky turtle: " .. chunky_turtle.id)
-    
     local strip = state.next_strip
-    local level = strip and strip.level or nil
+    local level = strip.level
     
     if not strip then
-        print("DEBUG: No strip available, regenerating and setting turtles to idle")
         gen_next_strip()
         add_task(mining_turtle, {action = 'pass', end_state = 'idle'})
         add_task(chunky_turtle, {action = 'pass', end_state = 'idle'})
         return
     end
     
-    print('DEBUG: Pairing ' .. mining_turtle.id .. ' and ' .. chunky_turtle.id .. ' for strip at ' .. strip.x .. ',' .. strip.y .. ',' .. strip.z)
+    print('Pairing ' .. mining_turtle.id .. ' and ' .. chunky_turtle.id)
     
     mining_turtle.pair = chunky_turtle
     chunky_turtle.pair = mining_turtle
@@ -3180,20 +3155,17 @@ end
 
 
 function solo_turtle_begin(turtle)
-    print("DEBUG: Beginning solo turtle assignment")
-    print("DEBUG: Turtle ID: " .. turtle.id .. " Type: " .. tostring(turtle.data.turtle_type))
     
     local strip = state.next_strip
-    local level = strip and strip.level or nil
+    local level = strip.level
     
     if not strip then
-        print("DEBUG: No strip available for solo turtle, regenerating and setting to idle")
         gen_next_strip()
         add_task(turtle, {action = 'pass', end_state = 'idle'})
         return
     end
     
-    print('DEBUG: Assigning solo turtle ' .. turtle.id .. ' to strip at ' .. strip.x .. ',' .. strip.y .. ',' .. strip.z)
+    print('Assigning ' .. turtle.id)
         
     turtle.steps_left = config.mission_length
     
@@ -3224,18 +3196,13 @@ end
 
 
 function check_pair_fuel(turtle)
-    print("DEBUG: Checking fuel for turtle " .. turtle.id)
     if state.min_fuel then
-        print("DEBUG: Turtle " .. turtle.id .. " fuel level: " .. tostring(turtle.data.fuel_level) .. ", required: " .. state.min_fuel)
         if (turtle.data.fuel_level ~= "unlimited" and turtle.data.fuel_level <= state.min_fuel) then
-            print("DEBUG: Turtle " .. turtle.id .. " needs fuel, sending to prepare")
             add_task(turtle, {action = 'prepare', data = {state.min_fuel}})
         else
-            print("DEBUG: Turtle " .. turtle.id .. " has sufficient fuel, ready to pair")
             add_task(turtle, {action = 'pass', end_state = 'pair'})
         end
     else
-        print("DEBUG: No minimum fuel set, generating next strip")
         gen_next_strip()
     end
 end
@@ -3256,18 +3223,13 @@ end
 
 
 function initialize_turtle(turtle)
-    print("DEBUG: Initializing turtle " .. turtle.id)
     local data = {session_id, config}
     
     if turtle.state ~= 'halt' then
-        print("DEBUG: Setting turtle " .. turtle.id .. " state to 'lost'")
         turtle.state = 'lost'
-    else
-        print("DEBUG: Turtle " .. turtle.id .. " remains in 'halt' state")
     end
     turtle.task_id = 2
     turtle.tasks = {}
-    print("DEBUG: Sending initialize task to turtle " .. turtle.id)
     add_task(turtle, {action = 'initialize', data = data})
 end
 
@@ -3276,7 +3238,6 @@ function add_task(turtle, task)
     if not task.data then
         task.data = {}
     end
-    print("DEBUG: Adding task '" .. task.action .. "' to turtle " .. turtle.id .. " (tasks in queue: " .. (#turtle.tasks + 1) .. ")")
     table.insert(turtle.tasks, task)
 end
 
@@ -3287,17 +3248,13 @@ function send_tasks(turtle)
         local turtle_data = turtle.data
         if turtle_data.request_id == turtle.task_id and turtle.data.session_id == session_id then
             if turtle_data.success then
-                print("DEBUG: Task '" .. task.action .. "' completed successfully for turtle " .. turtle.id)
                 if task.end_state then
                     if turtle.state == 'halt' and task.end_state ~= 'halt' then
-                        print("DEBUG: Unhalting turtle " .. turtle.id)
                         unhalt(turtle)
                     end
-                    print("DEBUG: Changing turtle " .. turtle.id .. " state from '" .. turtle.state .. "' to '" .. task.end_state .. "'")
                     turtle.state = task.end_state
                 end
                 if task.end_function then
-                    print("DEBUG: Executing end function for turtle " .. turtle.id)
                     if task.end_function_args then
                         task.end_function(unpack(task.end_function_args))
                     else
@@ -3305,15 +3262,12 @@ function send_tasks(turtle)
                     end
                 end
                 table.remove(turtle.tasks, 1)
-                print("DEBUG: Task removed, turtle " .. turtle.id .. " has " .. #turtle.tasks .. " tasks remaining")
-            else
-                print("DEBUG: Task '" .. task.action .. "' failed for turtle " .. turtle.id)
             end
             turtle.task_id = turtle.task_id + 1
         elseif (not turtle_data.busy) and ((not task.epoch) or (task.epoch > os.clock()) or (task.epoch + config.task_timeout < os.clock())) then
             -- ONLY SEND INSTRUCTION AFTER <config.task_timeout> SECONDS HAVE PASSED
             task.epoch = os.clock()
-            print(string.format('DEBUG: Sending %s directive to %d', task.action, turtle.id))
+            print(string.format('Sending %s directive to %d', task.action, turtle.id))
             rednet.send(turtle.id, {
                 action = task.action,
                 data = task.data,
@@ -3459,11 +3413,9 @@ function command_turtles()
     for _, turtle in pairs(state.turtles) do
         
         if turtle.data then
-            print("DEBUG: Processing turtle " .. turtle.id .. " - State: " .. tostring(turtle.state) .. ", Type: " .. tostring(turtle.data.turtle_type))
         
             if turtle.data.session_id ~= session_id then
                 -- BABY TURTLE NEEDS TO LEARN
-                print("DEBUG: Turtle " .. turtle.id .. " has wrong session ID, initializing")
                 if (not turtle.tasks) or (not turtle.tasks[1]) or (not (turtle.tasks[1].action == 'initialize')) then
                     initialize_turtle(turtle)
                 end
@@ -3471,34 +3423,27 @@ function command_turtles()
 
             if #turtle.tasks > 0 then
                 -- TURTLE IS BUSY
-                print("DEBUG: Turtle " .. turtle.id .. " is busy with " .. #turtle.tasks .. " tasks")
                 send_tasks(turtle)
 
             elseif not turtle.data.location then
                 -- TURTLE NEEDS A MAP
-                print("DEBUG: Turtle " .. turtle.id .. " needs location calibration")
                 add_task(turtle, {action = 'calibrate'})
 
             elseif turtle.state ~= 'halt' then
 
                 if turtle.state == 'park' then
                     -- TURTLE FOUND PARKING
-                    print("DEBUG: Turtle " .. turtle.id .. " is parked")
                     if state.on and (config.use_chunky_turtles or turtle.data.turtle_type == 'mining') then
-                        print("DEBUG: Mine is on, moving turtle " .. turtle.id .. " from park to idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
 
                 elseif not state.on and turtle.state ~= 'idle' then
                     -- TURTLE HAS TO STOP
-                    print("DEBUG: Mine is off, moving turtle " .. turtle.id .. " to idle")
                     add_task(turtle, {action = 'pass', end_state = 'idle'})
 
                 elseif turtle.state == 'lost' then
                     -- TURTLE IS CONFUSED
-                    print("DEBUG: Turtle " .. turtle.id .. " is lost")
                     if turtle.data.location.y < config.locations.mine_enter.y and (turtle.pair or not config.use_chunky_turtles) then
-                        print("DEBUG: Lost turtle " .. turtle.id .. " is underground with pair/solo mode, resuming mining")
                         add_task(turtle, {action = 'pass', end_state = 'trip'})
                         add_task(turtle, {
                             action = 'go_to_strip',
@@ -3506,73 +3451,57 @@ function command_turtles()
                             end_state = 'wait'
                         })
                     else
-                        print("DEBUG: Lost turtle " .. turtle.id .. " going to idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
 
                 elseif turtle.state == 'idle' then
                     -- TURTLE IS BORED
-                    print("DEBUG: Turtle " .. turtle.id .. " is idle")
                     free_turtle(turtle)
                     if turtle.data.location.y < config.locations.mine_enter.y then
-                        print("DEBUG: Idle turtle " .. turtle.id .. " is underground, sending up")
                         send_turtle_up(turtle)
                     elseif not basics.in_area(turtle.data.location, config.locations.control_room_area) then
-                        print("DEBUG: Idle turtle " .. turtle.id .. " is outside control room, halting")
                         halt(turtle)
                     elseif turtle.data.item_count > 0 or (turtle.data.fuel_level ~= "unlimited" and turtle.data.fuel_level < config.fuel_per_unit) then
-                        print("DEBUG: Idle turtle " .. turtle.id .. " needs supplies, preparing")
                         add_task(turtle, {action = 'prepare', data = {config.fuel_per_unit}})
                     elseif state.on then
-                        print("DEBUG: Idle turtle " .. turtle.id .. " ready for deployment, going to waiting room")
                         add_task(turtle, {
                             action = 'go_to_waiting_room',
                             end_function = check_pair_fuel,
                             end_function_args = {turtle},
                         })
                     else
-                        print("DEBUG: Idle turtle " .. turtle.id .. " going home to park (mine off)")
                         add_task(turtle, {action = 'go_to_home', end_state = 'park'})
                     end
 
                 elseif turtle.state == 'pair' then
                     -- TURTLE NEEDS A FRIEND
-                    print("DEBUG: Turtle " .. turtle.id .. " is ready to pair")
                     if config.use_chunky_turtles then
                         if not state.pair_hold then
                             if not turtle.pair then
-                                print("DEBUG: Adding turtle " .. turtle.id .. " to pairing queue")
                                 table.insert(turtles_for_pair, turtle)
                             end
                         else
                             if not (state.pair_hold[1].pair and state.pair_hold[2].pair) then
-                                print("DEBUG: Clearing invalid pair hold")
                                 state.pair_hold = nil
                             end
                         end
                     else
-                        print("DEBUG: Solo turtle mode, assigning turtle " .. turtle.id .. " individually")
                         solo_turtle_begin(turtle)
                     end
 
                 elseif turtle.state == 'wait' then
                     -- TURTLE GO DO SOME WORK
-                    print("DEBUG: Turtle " .. turtle.id .. " is waiting for work")
                     if turtle.pair then
                         if turtle.data.turtle_type == 'mining' and turtle.pair.state == 'wait' then
-                            print("DEBUG: Mining turtle " .. turtle.id .. " and chunky turtle " .. turtle.pair.id .. " both waiting")
                             if turtle.steps_left <= 0 or (turtle.data.empty_slot_count == 0 and turtle.pair.data.empty_slot_count == 0) or not good_on_fuel(turtle, turtle.pair) then
-                                print("DEBUG: Paired turtles " .. turtle.id .. "/" .. turtle.pair.id .. " finished mission (steps: " .. turtle.steps_left .. ", fuel good: " .. tostring(good_on_fuel(turtle, turtle.pair)) .. ")")
                                 add_task(turtle, {action = 'pass', end_state = 'idle'})
                                 add_task(turtle.pair, {action = 'pass', end_state = 'idle'})
                             elseif turtle.data.empty_slot_count == 0 then
-                                print("DEBUG: Mining turtle " .. turtle.id .. " inventory full, dumping")
                                 add_task(turtle, {
                                     action = 'dump',
                                     data = {reverse_shift[turtle.strip.orientation]}
                                 })
                             else
-                                print("DEBUG: Sending paired turtles " .. turtle.id .. "/" .. turtle.pair.id .. " to mine")
                                 add_task(turtle, {action = 'pass', end_state = 'mine'})
                                 add_task(turtle.pair, {action = 'pass', end_state = 'mine'})
                                 go_mine(turtle)
@@ -3580,21 +3509,16 @@ function command_turtles()
                         end
                     elseif not config.use_chunky_turtles then
                         if turtle.steps_left <= 0 or turtle.data.empty_slot_count == 0 or not good_on_fuel(turtle) then
-                            print("DEBUG: Solo turtle " .. turtle.id .. " finished mission (steps: " .. turtle.steps_left .. ", fuel good: " .. tostring(good_on_fuel(turtle)) .. ")")
                             add_task(turtle, {action = 'pass', end_state = 'idle'})
                         else
-                            print("DEBUG: Sending solo turtle " .. turtle.id .. " to mine")
                             add_task(turtle, {action = 'pass', end_state = 'mine'})
                             go_mine(turtle)
                         end
                     else
-                        print("DEBUG: Turtle " .. turtle.id .. " waiting but no valid pairing, going idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
                 elseif turtle.state == 'mine' then
-                    print("DEBUG: Turtle " .. turtle.id .. " is in mine state")
                     if config.use_chunky_turtles and not turtle.pair then
-                        print("DEBUG: Mining turtle " .. turtle.id .. " lost its pair, going idle")
                         add_task(turtle, {action = 'pass', end_state = 'idle'})
                     end
                 end
@@ -3602,12 +3526,7 @@ function command_turtles()
         end
     end
     if #turtles_for_pair == 2 then
-        print("DEBUG: Found 2 turtles ready for pairing: " .. turtles_for_pair[1].id .. " and " .. turtles_for_pair[2].id)
         pair_turtles_begin(turtles_for_pair[1], turtles_for_pair[2])
-    elseif #turtles_for_pair == 1 then
-        print("DEBUG: Only 1 turtle waiting for pairing: " .. turtles_for_pair[1].id)
-    elseif #turtles_for_pair > 2 then
-        print("DEBUG: " .. #turtles_for_pair .. " turtles waiting for pairing")
     end
 end
 
@@ -3619,7 +3538,6 @@ function main()
     else
         session_id = 1
     end
-    print("DEBUG: Starting mastermine with session ID: " .. session_id)
     local file = fs.open('/session_id', 'w')
     file.write(session_id)
     file.close()
@@ -3630,13 +3548,9 @@ function main()
     -- FIND THE CLOSEST STRIP
     gen_next_strip()
     
-    print("DEBUG: Mastermine initialization complete")
-    print("DEBUG: Mine status: " .. (state.on and "ON" or "OFF"))
-    print("DEBUG: Use chunky turtles: " .. tostring(config.use_chunky_turtles))
-    
     local cycle = 0
     while true do
-        print('DEBUG: Cycle: ' .. cycle .. ' (Active turtles: ' .. (function() local count = 0; for _ in pairs(state.turtles) do count = count + 1 end; return count end)() .. ')')
+        print('Cycle: ' .. cycle)
         user_input()         -- PROCESS USER INPUT
         command_turtles()    -- COMMAND TURTLES
         sleep(0.1)           -- DELAY 0.1 SECONDS

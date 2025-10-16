@@ -1,0 +1,153 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'programs/perlytiara/Mastermine/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build deployment structure
+        run: |
+          mkdir -p _site/Mastermine
+          
+          # Copy the bundled mastermine.lua (the self-extracting archive)
+          cp programs/perlytiara/Mastermine/mastermine.lua _site/Mastermine/mastermine.lua
+          
+          # Copy other essential files that might be needed
+          cp programs/perlytiara/Mastermine/README.md _site/Mastermine/README.md
+          cp programs/perlytiara/Mastermine/LICENSE _site/Mastermine/LICENSE
+          
+          # Copy individual files for direct access if needed
+          mkdir -p _site/Mastermine/hub_files
+          mkdir -p _site/Mastermine/turtle_files
+          mkdir -p _site/Mastermine/pocket_files
+          
+          cp -r programs/perlytiara/Mastermine/hub_files/* _site/Mastermine/hub_files/
+          cp -r programs/perlytiara/Mastermine/turtle_files/* _site/Mastermine/turtle_files/
+          cp -r programs/perlytiara/Mastermine/pocket_files/* _site/Mastermine/pocket_files/
+          
+          cp programs/perlytiara/Mastermine/hub.lua _site/Mastermine/hub.lua
+          cp programs/perlytiara/Mastermine/turtle.lua _site/Mastermine/turtle.lua
+          cp programs/perlytiara/Mastermine/pocket.lua _site/Mastermine/pocket.lua
+          
+          # Create an index.html for easy navigation
+          cat > _site/Mastermine/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Mastermine - ComputerCraft Turtle Mining System</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                      max-width: 900px;
+                      margin: 40px auto;
+                      padding: 0 20px;
+                      line-height: 1.6;
+                      color: #333;
+                  }
+                  h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+                  h2 { color: #34495e; margin-top: 30px; }
+                  code {
+                      background: #f4f4f4;
+                      padding: 2px 6px;
+                      border-radius: 3px;
+                      font-family: "Courier New", monospace;
+                  }
+                  pre {
+                      background: #2c3e50;
+                      color: #ecf0f1;
+                      padding: 15px;
+                      border-radius: 5px;
+                      overflow-x: auto;
+                  }
+                  pre code { background: none; color: #ecf0f1; }
+                  .download-section {
+                      background: #e8f5e9;
+                      padding: 20px;
+                      border-radius: 5px;
+                      border-left: 4px solid #4caf50;
+                      margin: 20px 0;
+                  }
+                  a { color: #3498db; text-decoration: none; }
+                  a:hover { text-decoration: underline; }
+                  ul { padding-left: 20px; }
+                  li { margin: 8px 0; }
+              </style>
+          </head>
+          <body>
+              <h1>🐢 Mastermine</h1>
+              <p>A fully automated strip mining network for ComputerCraft turtles!</p>
+              
+              <div class="download-section">
+                  <h2>🚀 Quick Install</h2>
+                  <p>In ComputerCraft, run these commands:</p>
+                  <pre><code>wget https://perlytiarage.github.io/Mastermine/mastermine.lua
+mastermine.lua disk
+disk/hub.lua</code></pre>
+              </div>
+              
+              <h2>📦 Available Files</h2>
+              <ul>
+                  <li><a href="mastermine.lua">mastermine.lua</a> - Main bundled installer</li>
+                  <li><a href="hub.lua">hub.lua</a> - Hub computer setup script</li>
+                  <li><a href="turtle.lua">turtle.lua</a> - Turtle setup script</li>
+                  <li><a href="pocket.lua">pocket.lua</a> - Pocket computer setup script</li>
+                  <li><a href="README.md">README.md</a> - Documentation</li>
+                  <li><a href="LICENSE">LICENSE</a> - MIT License</li>
+              </ul>
+              
+              <h2>📁 Individual Files</h2>
+              <ul>
+                  <li><a href="hub_files/">hub_files/</a> - Hub computer files</li>
+                  <li><a href="turtle_files/">turtle_files/</a> - Turtle files</li>
+                  <li><a href="pocket_files/">pocket_files/</a> - Pocket computer files</li>
+              </ul>
+              
+              <h2>📖 Documentation</h2>
+              <p>For detailed installation instructions and troubleshooting, see the <a href="README.md">README</a>.</p>
+              
+              <h2>🔗 Links</h2>
+              <ul>
+                  <li><a href="https://github.com/perlytiarage/turtle-cc">GitHub Repository</a></li>
+                  <li><a href="https://www.youtube.com/watch?v=2I2VXl9Pg6Q">Video Description</a></li>
+                  <li><a href="https://www.youtube.com/watch?v=2DTP1LXuiCg">Video Tutorial</a></li>
+              </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
